@@ -1,6 +1,8 @@
 package com.magnossao.catalog;
 
 import com.magnossao.catalog.model.*;
+import com.magnossao.catalog.repository.SkuRepository;
+import com.magnossao.catalog.service.SkuService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

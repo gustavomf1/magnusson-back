@@ -1,4 +1,4 @@
-package com.magnossao.catalog;
+package com.magnossao.catalog.repository;
 
 import com.magnossao.catalog.model.Produto;
 import com.magnossao.catalog.model.StatusProduto;

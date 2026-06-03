@@ -2,6 +2,8 @@ package com.magnossao.catalog;
 
 import com.magnossao.catalog.dto.ProdutoRequest;
 import com.magnossao.catalog.model.StatusProduto;
+import com.magnossao.catalog.service.ProdutoService;
+import com.magnossao.catalog.service.StorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

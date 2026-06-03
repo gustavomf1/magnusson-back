@@ -1,6 +1,9 @@
-package com.magnossao.catalog;
+package com.magnossao.catalog.controller;
 
 import com.magnossao.catalog.dto.*;
+import com.magnossao.catalog.repository.ProdutoRepository;
+import com.magnossao.catalog.service.ProdutoService;
+import com.magnossao.catalog.service.SkuService;
 import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

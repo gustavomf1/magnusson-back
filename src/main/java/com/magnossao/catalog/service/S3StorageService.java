@@ -1,4 +1,4 @@
-package com.magnossao.catalog;
+package com.magnossao.catalog.service;
 
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;

@@ -1,6 +1,7 @@
-package com.magnossao.catalog;
+package com.magnossao.catalog.service;
 
 import com.magnossao.catalog.model.*;
+import com.magnossao.catalog.repository.SkuRepository;
 import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;

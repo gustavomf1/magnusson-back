@@ -1,6 +1,8 @@
-package com.magnossao.catalog;
+package com.magnossao.catalog.service;
 
 import com.magnossao.catalog.dto.*;
+import com.magnossao.catalog.repository.ProdutoRepository;
+import com.magnossao.catalog.repository.SkuRepository;
 import com.magnossao.catalog.model.*;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;

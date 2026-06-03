@@ -1,5 +1,6 @@
-package com.magnossao.catalog;
+package com.magnossao.catalog.controller;
 
+import com.magnossao.catalog.service.ProdutoService;
 import com.magnossao.catalog.dto.ProdutoResponse;
 import com.magnossao.catalog.dto.ProdutoResumoResponse;
 import com.magnossao.catalog.model.StatusProduto;

@@ -1,4 +1,4 @@
-package com.magnossao.catalog;
+package com.magnossao.catalog.service;
 
 public interface StorageService {
 

@@ -1,4 +1,4 @@
-package com.magnossao.catalog;
+package com.magnossao.catalog.service;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
