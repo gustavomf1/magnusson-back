@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: magnossao-backend
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/magnossao}
+    username: ${DATABASE_USER:magnossao}
+    password: ${DATABASE_PASSWORD:magnossao}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+
+server:
+  port: ${PORT:8080}
+
+app:
+  cors:
+    origin: ${APP_CORS_ORIGIN:http://localhost:3000}

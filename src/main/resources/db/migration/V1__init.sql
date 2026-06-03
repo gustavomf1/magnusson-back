@@ -1,0 +1,6 @@
+CREATE TABLE health_check (
+    id BIGSERIAL PRIMARY KEY,
+    criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+INSERT INTO health_check DEFAULT VALUES;
