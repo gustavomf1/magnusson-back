@@ -108,9 +108,9 @@ class AdminProdutoControllerIT {
     }
 
     @Test
-    void semAutenticacaoRetorna403() {
+    void semAutenticacaoRetorna401() {
         assertThat(mvc.get().uri("/api/admin/produtos"))
-                .hasStatus(403);
+                .hasStatus(401);
     }
 
     @Test
