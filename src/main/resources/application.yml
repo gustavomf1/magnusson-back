@@ -18,6 +18,11 @@ server:
 app:
   cors:
     origin: ${APP_CORS_ORIGIN:http://localhost:3000}
+  jwt:
+    secret: ${JWT_SECRET:dev-only-insecure-secret-key-change-in-prod}
+    expiration-hours: 24
+  cookie:
+    secure: ${COOKIE_SECURE:false}
 
 storage:
   endpoint: ${STORAGE_ENDPOINT:http://localhost:9000}
