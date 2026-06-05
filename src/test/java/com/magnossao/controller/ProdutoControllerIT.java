@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
@@ -38,10 +39,14 @@ class ProdutoControllerIT {
     @Autowired
     ProdutoService produtoService;
 
+    @Autowired
+    JdbcTemplate jdbc;
+
     MockMvcTester mvc;
 
     @BeforeEach
     void setUp() {
+        jdbc.execute("TRUNCATE TABLE produto CASCADE");
         mvc = MockMvcTester.from(wac);
     }
 
