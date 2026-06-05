@@ -15,7 +15,7 @@ INSERT INTO usuario (nome, email, senha_hash, cpf, telefone, role)
 VALUES (
     'Admin',
     'admin@magnossao.com.br',
-    '$2a$12$Ei4zjZFBSXPPdGAQ0qFhsOyBBfTlEahFqiRiqLhM6bF0U.8yLBMxu',
+    '$2a$12$mkUv4mz7W6pFYhlyEv9aKu3Ol34AqorJDN4vyHahmd.VttkmhVAVy',
     '000.000.000-00',
     '(00) 00000-0000',
     'ADMIN'

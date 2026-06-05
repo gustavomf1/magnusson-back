@@ -12,6 +12,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -52,8 +53,11 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public UsuarioResponse me(Authentication auth) {
-        return UsuarioResponse.from((Usuario) auth.getPrincipal());
+    public ResponseEntity<UsuarioResponse> me(Authentication auth) {
+        if (auth == null || !auth.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        return ResponseEntity.ok(UsuarioResponse.from((Usuario) auth.getPrincipal()));
     }
 
     private Cookie criarCookie(String name, String value, int maxAge) {
