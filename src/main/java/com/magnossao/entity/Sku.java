@@ -29,4 +29,10 @@ public class Sku {
 
     @Column(nullable = false)
     private boolean ativo = true;
+
+    @Column(nullable = false)
+    private int quantidade = 0;
+
+    @Version
+    private long version;
 }
