@@ -109,7 +109,7 @@ public class AdminProdutoController {
             .orElseThrow(() -> new NoSuchElementException("Produto não encontrado: " + id));
         return skuService.gerarSkus(produto).stream()
             .map(s -> new SkuDto(s.getId(), s.getCor().getId(), s.getTamanho().getId(),
-                                  s.getCodigo(), s.isAtivo()))
+                                  s.getCodigo(), s.isAtivo(), s.getQuantidade() > 0))
             .toList();
     }
 

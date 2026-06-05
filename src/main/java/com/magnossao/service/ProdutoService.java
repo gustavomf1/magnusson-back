@@ -218,7 +218,7 @@ public class ProdutoService {
             p.getImagens().stream().map(i -> new ImagemDto(i.getId(), i.getUrl(), i.getAlt(), i.getOrdem())).toList(),
             p.getCores().stream().map(c -> new CorDto(c.getId(), c.getNome(), c.getToken(), c.getHex())).toList(),
             p.getTamanhos().stream().map(t -> new TamanhoDto(t.getId(), t.getLabel(), t.getPeito(), t.getComprimento(), t.getOmbro())).toList(),
-            p.getSkus().stream().map(s -> new SkuDto(s.getId(), s.getCor().getId(), s.getTamanho().getId(), s.getCodigo(), s.isAtivo())).toList(),
+            p.getSkus().stream().map(s -> new SkuDto(s.getId(), s.getCor().getId(), s.getTamanho().getId(), s.getCodigo(), s.isAtivo(), s.getQuantidade() > 0)).toList(),
             p.getBeneficios().stream().map(b -> new BeneficioDto(b.getId(), b.getIconeNome(), b.getTitulo(), b.getCorpo(), b.getOrdem())).toList(),
             p.getDetalhes().stream().map(d -> new DetalheDto(d.getId(), d.getLabel(), d.getUrlImagem(), d.getAlt(), d.getOrdem())).toList(),
             p.getReviews().stream().map(r -> new ReviewDto(r.getId(), r.getCitacao(), r.getNome(), r.getCidade())).toList(),
