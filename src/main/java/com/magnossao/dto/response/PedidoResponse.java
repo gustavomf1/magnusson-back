@@ -10,9 +10,13 @@ public record PedidoResponse(
     String nomeCliente, String cpfCnpj, String email, String telefone,
     String endLogradouro, String endNumero, String endComplemento,
     String endBairro, String endCep, String endCidade, String endUf,
-    List<PedidoItemResponse> itens, OffsetDateTime criadoEm
+    List<PedidoItemResponse> itens, OffsetDateTime criadoEm, String initPoint
 ) {
     public static PedidoResponse from(Pedido p) {
+        return from(p, null);
+    }
+
+    public static PedidoResponse from(Pedido p, String initPoint) {
         return new PedidoResponse(
             p.getId(), p.getStatus().name(), p.getTotal(),
             p.getDadosNf().getNomeCliente(), p.getDadosNf().getCpfCnpj(),
@@ -21,7 +25,7 @@ public record PedidoResponse(
             p.getEndereco().getComplemento(), p.getEndereco().getBairro(),
             p.getEndereco().getCep(), p.getEndereco().getCidade(), p.getEndereco().getUf(),
             p.getItens().stream().map(PedidoItemResponse::from).toList(),
-            p.getCriadoEm()
+            p.getCriadoEm(), initPoint
         );
     }
 }
