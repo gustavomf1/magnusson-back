@@ -13,3 +13,6 @@ CREATE TABLE estorno (
     mp_refund_id    VARCHAR(100)   NOT NULL,
     criado_em       TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX idx_estorno_pedido_item ON estorno(pedido_item_id);
+CREATE INDEX idx_estorno_pedido ON estorno(pedido_id);
