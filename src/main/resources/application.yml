@@ -23,6 +23,7 @@ app:
     expiration-hours: 24
   cookie:
     secure: ${COOKIE_SECURE:false}
+  base-url: ${APP_BASE_URL:http://localhost:8080}
 
 storage:
   endpoint: ${STORAGE_ENDPOINT:http://localhost:9000}
@@ -31,3 +32,8 @@ storage:
   secret-key: ${STORAGE_SECRET_KEY:minioadmin}
   region: ${STORAGE_REGION:us-east-1}
   public-base-url: ${STORAGE_PUBLIC_BASE_URL:http://localhost:9000/magnossao}
+
+mercadopago:
+  access-token: ${MERCADOPAGO_ACCESS_TOKEN:TEST-0000000000000000-000000-00000000000000000000000000000000-000000000}
+  webhook-secret: ${MERCADOPAGO_WEBHOOK_SECRET:dev-only-insecure-webhook-secret}
+  expiracao-horas: ${MERCADOPAGO_EXPIRACAO_HORAS:72}
