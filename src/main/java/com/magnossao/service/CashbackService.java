@@ -135,4 +135,13 @@ public class CashbackService {
         // itemPersistido não precisa de save explícito: é entidade gerenciada nesta sessão JPA,
         // e o dirty-check na hora do flush persistirá a mudança automaticamente
     }
+
+    @Transactional
+    public void cancelarCuponsDoItem(Long pedidoItemOrigemId) {
+        List<Cupom> ativos = cupomRepository.findByPedidoItemOrigemIdAndStatus(pedidoItemOrigemId, StatusCupom.ATIVO);
+        for (Cupom cupom : ativos) {
+            cupom.setStatus(StatusCupom.CANCELADO);
+            cupomRepository.save(cupom);
+        }
+    }
 }

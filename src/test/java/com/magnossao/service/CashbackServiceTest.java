@@ -26,6 +26,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -268,6 +269,32 @@ class CashbackServiceTest {
 
         assertThatThrownBy(() -> cashbackService.validarEAplicar(usuario, 900L, BigDecimal.valueOf(30), jaAplicados))
                 .isInstanceOf(CupomInvalidoException.class);
+    }
+
+    @Test
+    void cancelarCuponsDoItemCancelaApenasOsAtivos() {
+        Cupom ativo = new Cupom();
+        ativo.setId(1L);
+        ativo.setStatus(StatusCupom.ATIVO);
+
+        when(cupomRepository.findByPedidoItemOrigemIdAndStatus(500L, StatusCupom.ATIVO))
+                .thenReturn(List.of(ativo));
+        when(cupomRepository.save(any(Cupom.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        cashbackService.cancelarCuponsDoItem(500L);
+
+        assertThat(ativo.getStatus()).isEqualTo(StatusCupom.CANCELADO);
+        verify(cupomRepository).save(ativo);
+    }
+
+    @Test
+    void cancelarCuponsDoItemNaoFazNadaQuandoNaoHaCupomAtivo() {
+        when(cupomRepository.findByPedidoItemOrigemIdAndStatus(500L, StatusCupom.ATIVO))
+                .thenReturn(List.of());
+
+        cashbackService.cancelarCuponsDoItem(500L);
+
+        verify(cupomRepository, never()).save(any());
     }
 
     @Test

@@ -223,6 +223,7 @@ public class PagamentoService {
         estorno.setValor(valor);
         estorno.setMpRefundId(refund.getId().toString());
         estornoRepository.save(estorno);
+        cashbackService.cancelarCuponsDoItem(item.getId());
 
         estoqueService.restaurarEstoque(item.getSku().getId(), quantidade);
 
