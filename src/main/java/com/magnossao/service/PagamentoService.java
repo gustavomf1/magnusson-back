@@ -42,6 +42,7 @@ public class PagamentoService {
     private final String frontendUrl;
     private final String webhookSecret;
     private final int expiracaoHoras;
+    private final CashbackService cashbackService;
 
     public PagamentoService(PreferenceClient preferenceClient, PaymentClient paymentClient,
                             PaymentRefundClient paymentRefundClient, EstoqueService estoqueService,
@@ -49,7 +50,8 @@ public class PagamentoService {
                             @Value("${app.base-url}") String baseUrl,
                             @Value("${app.cors.origin}") String frontendUrl,
                             @Value("${mercadopago.webhook-secret}") String webhookSecret,
-                            @Value("${mercadopago.expiracao-horas}") int expiracaoHoras) {
+                            @Value("${mercadopago.expiracao-horas}") int expiracaoHoras,
+                            CashbackService cashbackService) {
         this.preferenceClient = preferenceClient;
         this.paymentClient = paymentClient;
         this.paymentRefundClient = paymentRefundClient;
@@ -60,6 +62,7 @@ public class PagamentoService {
         this.frontendUrl = frontendUrl;
         this.webhookSecret = webhookSecret;
         this.expiracaoHoras = expiracaoHoras;
+        this.cashbackService = cashbackService;
     }
 
     public String criarPreferencia(Pedido pedido) throws com.mercadopago.exceptions.MPException, com.mercadopago.exceptions.MPApiException {
@@ -249,7 +252,10 @@ public class PagamentoService {
 
         pedido.setMpPaymentId(paymentIdStr);
         switch (statusMp) {
-            case "approved" -> pedido.setStatus(StatusPedido.PAGO);
+            case "approved" -> {
+                pedido.setStatus(StatusPedido.PAGO);
+                cashbackService.gerarCupons(pedido);
+            }
             case "rejected", "cancelled" -> {
                 pedido.setStatus(StatusPedido.CANCELADO);
                 for (PedidoItem item : pedido.getItens()) {

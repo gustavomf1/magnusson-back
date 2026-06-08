@@ -1,8 +1,15 @@
 package com.magnossao.service;
 
 import com.magnossao.dto.request.RegraCashbackRequest;
+import com.magnossao.entity.Cupom;
+import com.magnossao.entity.Pedido;
+import com.magnossao.entity.PedidoItem;
 import com.magnossao.entity.Produto;
 import com.magnossao.entity.RegraCashback;
+import com.magnossao.entity.Sku;
+import com.magnossao.entity.StatusCupom;
+import com.magnossao.entity.StatusPedido;
+import com.magnossao.entity.Usuario;
 import com.magnossao.repository.CupomRepository;
 import com.magnossao.repository.PedidoRepository;
 import com.magnossao.repository.ProdutoRepository;
@@ -95,5 +102,86 @@ class CashbackServiceTest {
         cashbackService.removerRegra(7L);
 
         verify(regraCashbackRepository).delete(existente);
+    }
+
+    private Pedido pedidoComItem(Usuario usuario, Produto produto, BigDecimal precoUnitario, int quantidade) {
+        Pedido pedido = new Pedido();
+        pedido.setId(50L);
+        pedido.setUsuario(usuario);
+        pedido.setStatus(StatusPedido.PAGO);
+
+        Sku sku = new Sku();
+        sku.setProduto(produto);
+
+        PedidoItem item = new PedidoItem();
+        item.setId(500L);
+        item.setPedido(pedido);
+        item.setSku(sku);
+        item.setPrecoUnitario(precoUnitario);
+        item.setQuantidade(quantidade);
+        pedido.getItens().add(item);
+        return pedido;
+    }
+
+    @Test
+    void gerarCuponsCriaUmCupomPorItemElegivel() {
+        Usuario usuario = new Usuario();
+        usuario.setId(9L);
+
+        Produto produto = new Produto();
+        produto.setId(7L);
+        RegraCashback regra = new RegraCashback();
+        regra.setProduto(produto);
+        regra.setPercentual(BigDecimal.valueOf(10));
+        regra.setPrazoValidadeDias(30);
+        produto.setRegraCashback(regra);
+
+        Pedido pedido = pedidoComItem(usuario, produto, BigDecimal.valueOf(100), 2);
+
+        when(pedidoRepository.findById(50L)).thenReturn(Optional.of(pedido));
+        when(cupomRepository.save(any(Cupom.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        cashbackService.gerarCupons(pedido);
+
+        ArgumentCaptor<Cupom> captor = ArgumentCaptor.forClass(Cupom.class);
+        verify(cupomRepository).save(captor.capture());
+        Cupom gerado = captor.getValue();
+        assertThat(gerado.getValor()).isEqualByComparingTo("10.00");
+        assertThat(gerado.getUsuario()).isSameAs(usuario);
+        assertThat(gerado.getPedidoItemOrigem()).isSameAs(pedido.getItens().get(0));
+        assertThat(gerado.getStatus()).isEqualTo(StatusCupom.ATIVO);
+        assertThat(gerado.getExpiraEm()).isNotNull();
+    }
+
+    @Test
+    void gerarCuponsNaoGeraQuandoProdutoNaoTemRegra() {
+        Usuario usuario = new Usuario();
+        usuario.setId(9L);
+        Produto produto = new Produto();
+        produto.setId(7L);
+
+        Pedido pedido = pedidoComItem(usuario, produto, BigDecimal.valueOf(100), 1);
+        when(pedidoRepository.findById(50L)).thenReturn(Optional.of(pedido));
+
+        cashbackService.gerarCupons(pedido);
+
+        verify(cupomRepository, never()).save(any());
+    }
+
+    @Test
+    void gerarCuponsNaoGeraParaPedidoAnonimo() {
+        Produto produto = new Produto();
+        produto.setId(7L);
+        RegraCashback regra = new RegraCashback();
+        regra.setProduto(produto);
+        regra.setPercentual(BigDecimal.valueOf(10));
+        produto.setRegraCashback(regra);
+
+        Pedido pedido = pedidoComItem(null, produto, BigDecimal.valueOf(100), 1);
+
+        cashbackService.gerarCupons(pedido);
+
+        verify(pedidoRepository, never()).findById(any());
+        verify(cupomRepository, never()).save(any());
     }
 }

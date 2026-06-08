@@ -33,16 +33,15 @@ class PagamentoServiceTest {
     @Mock com.magnossao.repository.EstornoRepository estornoRepository;
     @Mock PedidoRepository pedidoRepository;
     @Mock Preference preferenceFake;
+    @Mock CashbackService cashbackService;
 
     PagamentoService pagamentoService;
 
     @BeforeEach
     void setUp() {
-        pagamentoService = new PagamentoService(
-            preferenceClient, paymentClient, paymentRefundClient,
-            estoqueService, estornoRepository, pedidoRepository,
-            "http://localhost:8080", "http://localhost:3000",
-            "dev-only-insecure-webhook-secret", 72);
+        pagamentoService = new PagamentoService(preferenceClient, paymentClient, paymentRefundClient, estoqueService,
+                estornoRepository, pedidoRepository, "http://localhost:8080", "http://localhost:3000",
+                "dev-only-insecure-webhook-secret", 72, cashbackService);
     }
 
     private Pedido pedidoComUmItem() {
