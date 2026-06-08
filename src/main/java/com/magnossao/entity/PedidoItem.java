@@ -21,6 +21,10 @@ public class PedidoItem {
     @JoinColumn(name = "sku_id", nullable = false)
     private Sku sku;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cupom_aplicado_id")
+    private Cupom cupomAplicado;
+
     @Column(name = "nome_produto", nullable = false, length = 255)
     private String nomeProduto;
 
