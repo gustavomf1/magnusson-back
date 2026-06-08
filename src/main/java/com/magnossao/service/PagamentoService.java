@@ -187,6 +187,15 @@ public class PagamentoService {
             throw new EstornoInvalidoException("Pedido não está em status PAGO ou PARCIALMENTE_ESTORNADO");
         }
 
+        Long mpPaymentId;
+        try {
+            mpPaymentId = Long.valueOf(pedido.getMpPaymentId());
+        } catch (NumberFormatException e) {
+            log.warn("Pedido {} está {} mas não possui mpPaymentId válido para estorno: '{}'",
+                pedido.getId(), pedido.getStatus(), pedido.getMpPaymentId());
+            throw new EstornoInvalidoException("Pedido não possui pagamento confirmado no Mercado Pago para estornar");
+        }
+
         PedidoItem item = pedido.getItens().stream()
             .filter(i -> i.getId().equals(pedidoItemId))
             .findFirst()
@@ -199,7 +208,9 @@ public class PagamentoService {
 
         BigDecimal valor = item.getPrecoUnitario().multiply(BigDecimal.valueOf(quantidade));
 
-        PaymentRefund refund = paymentRefundClient.refund(Long.valueOf(pedido.getMpPaymentId()), valor);
+        PaymentRefund refund = paymentRefundClient.refund(mpPaymentId, valor);
+        log.info("Reembolso {} confirmado no Mercado Pago para o pedido {} (item {}, quantidade {}, valor {})",
+            refund.getId(), pedido.getId(), pedidoItemId, quantidade, valor);
 
         Estorno estorno = new Estorno();
         estorno.setPedido(pedido);
@@ -217,6 +228,9 @@ public class PagamentoService {
             ? StatusPedido.ESTORNADO
             : StatusPedido.PARCIALMENTE_ESTORNADO);
         pedidoRepository.save(pedido);
+
+        log.info("Estorno {} registrado para o pedido {} — novo status: {}, valor total estornado: {}",
+            estorno.getMpRefundId(), pedido.getId(), pedido.getStatus(), pedido.getValorEstornado());
 
         return EstornoResponse.from(estorno);
     }

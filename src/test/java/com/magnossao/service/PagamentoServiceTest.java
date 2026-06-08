@@ -222,11 +222,34 @@ class PagamentoServiceTest {
     void rejeitaEstornoDeQuantidadeMaiorQueADisponivel() {
         Pedido pedido = pedidoComUmItem();
         pedido.setStatus(StatusPedido.PAGO);
+        pedido.setMpPaymentId("555");
         PedidoItem item = pedido.getItens().get(0);
 
         when(estornoRepository.somaQuantidadeEstornadaPorItem(item.getId())).thenReturn(1);
 
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> pagamentoService.estornarItem(pedido, item.getId(), 2))
+            .isInstanceOf(EstornoInvalidoException.class);
+    }
+
+    @Test
+    void rejeitaEstornoQuandoPedidoNaoTemMpPaymentId() {
+        Pedido pedido = pedidoComUmItem();
+        pedido.setStatus(StatusPedido.PAGO);
+        pedido.setMpPaymentId(null);
+        PedidoItem item = pedido.getItens().get(0);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> pagamentoService.estornarItem(pedido, item.getId(), 1))
+            .isInstanceOf(EstornoInvalidoException.class);
+    }
+
+    @Test
+    void rejeitaEstornoQuandoPedidoTemMpPaymentIdInvalido() {
+        Pedido pedido = pedidoComUmItem();
+        pedido.setStatus(StatusPedido.PAGO);
+        pedido.setMpPaymentId("não-numérico");
+        PedidoItem item = pedido.getItens().get(0);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> pagamentoService.estornarItem(pedido, item.getId(), 1))
             .isInstanceOf(EstornoInvalidoException.class);
     }
 
