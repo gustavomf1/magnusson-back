@@ -7,5 +7,5 @@ public record ProdutoResponse(
     BigDecimal preco, String descricao, String descricaoSeo, String status,
     List<ImagemDto> imagens, List<CorDto> cores, List<TamanhoDto> tamanhos,
     List<SkuDto> skus, List<BeneficioDto> beneficios, List<DetalheDto> detalhes,
-    List<ReviewDto> reviews, List<FaqDto> faqs
+    List<ReviewDto> reviews, List<FaqDto> faqs, RegraCashbackInfoDto regraCashback
 ) {}
