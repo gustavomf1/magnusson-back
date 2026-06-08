@@ -115,16 +115,17 @@ public class PagamentoService {
     public void processarNotificacao(String paymentIdStr) throws Exception {
         Long paymentId = Long.valueOf(paymentIdStr);
         Payment payment = paymentClient.get(paymentId);
-        aplicarStatusDoPagamento(payment);
-    }
 
-    private void aplicarStatusDoPagamento(Payment payment) {
         Long pedidoId = Long.valueOf(payment.getExternalReference());
         Pedido pedido = pedidoRepository.findById(pedidoId).orElse(null);
         if (pedido == null) {
             return;
         }
 
+        aplicarStatusDoPagamento(pedido, payment);
+    }
+
+    private void aplicarStatusDoPagamento(Pedido pedido, Payment payment) {
         String paymentIdStr = payment.getId().toString();
         String statusMp = payment.getStatus();
 
