@@ -132,5 +132,7 @@ public class CashbackService {
         cupom.setPedidoItemUso(itemPersistido);
         cupomRepository.save(cupom);
         itemPersistido.setCupomAplicado(cupom);
+        // itemPersistido não precisa de save explícito: é entidade gerenciada nesta sessão JPA,
+        // e o dirty-check na hora do flush persistirá a mudança automaticamente
     }
 }

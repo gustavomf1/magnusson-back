@@ -117,6 +117,8 @@ public class PedidoService {
                 BigDecimal totalItem = sku.getProduto().getPreco().multiply(BigDecimal.valueOf(itemReq.quantidade()));
                 total = total.add(totalItem);
 
+                // Fase 1: validar e marcar cupom como USADO (antes do save — entidade transiente)
+                // DEVE executar dentro do txTemplate para que o rollback do cupom acompanhe o rollback do pedido
                 if (itemReq.cupomId() != null && usuario != null) {
                     var resultado = cashbackService.validarEAplicar(usuario, itemReq.cupomId(), totalItem, cupomIdsAplicados);
                     total = total.subtract(resultado.desconto());
@@ -127,6 +129,7 @@ public class PedidoService {
 
             Pedido salvoNaTx = pedidoRepository.save(pedido);
 
+            // Fase 2: ligar cupom ao item persistido (após o save — item já tem id)
             for (ItemCupom ic : itensComCupom) {
                 cashbackService.confirmarUso(ic.cupom().cupom(), ic.item());
             }
