@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.time.OffsetDateTime;
 import java.util.HexFormat;
 import java.util.List;
 
@@ -143,6 +144,27 @@ public class PagamentoService {
         }
 
         aplicarStatusDoPagamento(pedido, payment);
+    }
+
+    public void consultarEAtualizar(Long pedidoId, String mpPaymentId) throws Exception {
+        Payment payment = paymentClient.get(Long.valueOf(mpPaymentId));
+        Pedido pedido = pedidoRepository.findById(pedidoId).orElse(null);
+        if (pedido == null) {
+            return;
+        }
+        aplicarStatusDoPagamento(pedido, payment);
+    }
+
+    public boolean expirou(Pedido pedido) {
+        return pedido.getCriadoEm().isBefore(OffsetDateTime.now().minusHours(expiracaoHoras));
+    }
+
+    public void cancelarPorExpiracao(Pedido pedido) {
+        pedido.setStatus(StatusPedido.CANCELADO);
+        for (PedidoItem item : pedido.getItens()) {
+            estoqueService.restaurarEstoque(item.getSku().getId(), item.getQuantidade());
+        }
+        pedidoRepository.save(pedido);
     }
 
     private void aplicarStatusDoPagamento(Pedido pedido, Payment payment) {
