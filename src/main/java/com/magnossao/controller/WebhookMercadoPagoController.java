@@ -1,8 +1,8 @@
 package com.magnossao.controller;
 
 import com.magnossao.service.PagamentoService;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class WebhookMercadoPagoController {
 
     private final PagamentoService pagamentoService;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
     @PostMapping
     public ResponseEntity<Void> receber(@RequestHeader("x-signature") String signature,
