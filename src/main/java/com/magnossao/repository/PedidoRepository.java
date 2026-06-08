@@ -13,6 +13,8 @@ import java.util.List;
 public interface PedidoRepository extends JpaRepository<Pedido, Long> {
     List<Pedido> findByUsuarioIdOrderByCriadoEmDesc(Long usuarioId);
 
+    List<Pedido> findByStatusAndCriadoEmBefore(StatusPedido status, OffsetDateTime limite);
+
     @Query("""
         SELECT p FROM Pedido p
         WHERE (:status IS NULL OR p.status = :status)

@@ -8,6 +8,8 @@ import com.magnossao.service.EstoqueService;
 import com.magnossao.service.ProdutoService;
 import com.magnossao.service.SkuService;
 import com.magnossao.service.StorageService;
+import com.mercadopago.client.preference.PreferenceClient;
+import com.mercadopago.resources.preference.Preference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +28,9 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import java.math.BigDecimal;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
@@ -36,6 +41,7 @@ class PedidoControllerIT {
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16");
 
     @MockitoBean StorageService storageService;
+    @MockitoBean PreferenceClient preferenceClient;
 
     private static final com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
 
@@ -49,8 +55,13 @@ class PedidoControllerIT {
     MockMvcTester mvc;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         mvc = MockMvcTester.from(wac, builder -> builder.apply(springSecurity()).build());
+
+        Preference preferenceMock = mock(Preference.class);
+        when(preferenceMock.getId()).thenReturn("pref-mock-id");
+        when(preferenceMock.getInitPoint()).thenReturn("https://mercadopago.com/init-point-mock");
+        when(preferenceClient.create(any())).thenReturn(preferenceMock);
     }
 
     private Long criarSkuComEstoque(int estoque) {
@@ -114,6 +125,17 @@ class PedidoControllerIT {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(checkoutBody(skuId, 5)))
                 .hasStatus(409);
+    }
+
+    @Test
+    void checkoutRetornaInitPointDoMercadoPago() {
+        Long skuId = criarSkuComEstoque(5);
+        assertThat(mvc.post().uri("/api/pedidos")
+                .header("X-Forwarded-For", uniqueIp())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(checkoutBody(skuId, 1)))
+                .hasStatus(201)
+                .bodyJson().extractingPath("$.initPoint").isNotNull();
     }
 
     @Test

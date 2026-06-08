@@ -9,6 +9,8 @@ import com.magnossao.exception.PedidoNaoEncontradoException;
 import com.magnossao.repository.PedidoRepository;
 import com.magnossao.repository.SkuRepository;
 import jakarta.transaction.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -22,20 +24,24 @@ import java.util.List;
 @Service
 public class PedidoService {
 
+    private static final Logger log = LoggerFactory.getLogger(PedidoService.class);
+
     private final PedidoRepository pedidoRepository;
     private final SkuRepository skuRepository;
     private final EstoqueService estoqueService;
     private final CarrinhoService carrinhoService;
     private final TransactionTemplate txTemplate;
+    private final PagamentoService pagamentoService;
 
     public PedidoService(PedidoRepository pedidoRepository, SkuRepository skuRepository,
                          EstoqueService estoqueService, CarrinhoService carrinhoService,
-                         TransactionTemplate txTemplate) {
+                         TransactionTemplate txTemplate, PagamentoService pagamentoService) {
         this.pedidoRepository = pedidoRepository;
         this.skuRepository = skuRepository;
         this.estoqueService = estoqueService;
         this.carrinhoService = carrinhoService;
         this.txTemplate = txTemplate;
+        this.pagamentoService = pagamentoService;
     }
 
     // SEM @Transactional externo: @Retryable do EstoqueService precisa de transação própria.
@@ -62,7 +68,7 @@ public class PedidoService {
             throw e;
         }
 
-        return txTemplate.execute(status -> {
+        Pedido salvo = txTemplate.execute(status -> {
             Pedido pedido = new Pedido();
             pedido.setUsuario(usuario);
 
@@ -100,14 +106,26 @@ public class PedidoService {
             }
             pedido.setTotal(total);
 
-            Pedido salvo = pedidoRepository.save(pedido);
+            Pedido salvoNaTx = pedidoRepository.save(pedido);
 
             if (usuario != null) {
                 carrinhoService.limparCarrinho(usuario.getId());
             }
 
-            return PedidoResponse.from(salvo);
+            return salvoNaTx;
         });
+
+        String initPoint = null;
+        try {
+            initPoint = pagamentoService.criarPreferencia(salvo);
+            pedidoRepository.save(salvo);
+        } catch (Exception e) {
+            // Falha ao criar a preferência não desfaz o pedido — o job de expiração
+            // eventualmente cancela e restaura o estoque (ver PagamentoService spec, fluxo 1).
+            log.warn("Falha ao criar preferência de pagamento no Mercado Pago para o pedido {}: {}", salvo.getId(), e.getMessage());
+        }
+
+        return PedidoResponse.from(salvo, initPoint);
     }
 
     @Transactional

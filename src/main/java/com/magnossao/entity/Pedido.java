@@ -27,6 +27,15 @@ public class Pedido {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal total;
 
+    @Column(name = "mp_preference_id", length = 100)
+    private String mpPreferenceId;
+
+    @Column(name = "mp_payment_id", length = 100)
+    private String mpPaymentId;
+
+    @Column(name = "valor_estornado", nullable = false, precision = 10, scale = 2)
+    private BigDecimal valorEstornado = BigDecimal.ZERO;
+
     @Embedded
     private DadosNf dadosNf = new DadosNf();
 

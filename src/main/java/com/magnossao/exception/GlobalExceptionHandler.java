@@ -58,6 +58,18 @@ public class GlobalExceptionHandler {
                 .body(Map.of("erro", ex.getMessage()));
     }
 
+    @ExceptionHandler(PagamentoRecusadoException.class)
+    public ResponseEntity<Map<String, String>> handlePagamentoRecusado(PagamentoRecusadoException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("erro", ex.getMessage()));
+    }
+
+    @ExceptionHandler(EstornoInvalidoException.class)
+    public ResponseEntity<Map<String, String>> handleEstornoInvalido(EstornoInvalidoException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("erro", ex.getMessage()));
+    }
+
     @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
     public ResponseEntity<Map<String, String>> handleAccessDenied(org.springframework.security.access.AccessDeniedException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
