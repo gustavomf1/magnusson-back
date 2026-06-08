@@ -147,7 +147,15 @@ public class PagamentoService {
     }
 
     public void consultarEAtualizar(Long pedidoId, String mpPaymentId) throws Exception {
-        Payment payment = paymentClient.get(Long.valueOf(mpPaymentId));
+        Long paymentId;
+        try {
+            paymentId = Long.valueOf(mpPaymentId);
+        } catch (NumberFormatException e) {
+            log.warn("Pedido {} possui mpPaymentId inválido: '{}'", pedidoId, mpPaymentId);
+            return;
+        }
+
+        Payment payment = paymentClient.get(paymentId);
         Pedido pedido = pedidoRepository.findById(pedidoId).orElse(null);
         if (pedido == null) {
             return;
@@ -160,6 +168,8 @@ public class PagamentoService {
     }
 
     public void cancelarPorExpiracao(Pedido pedido) {
+        log.info("Pedido {} cancelado automaticamente por expiração ({}h sem confirmação de pagamento)",
+            pedido.getId(), expiracaoHoras);
         pedido.setStatus(StatusPedido.CANCELADO);
         for (PedidoItem item : pedido.getItens()) {
             estoqueService.restaurarEstoque(item.getSku().getId(), item.getQuantidade());
