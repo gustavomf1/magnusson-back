@@ -10,6 +10,8 @@ import com.mercadopago.client.payment.PaymentRefundClient;
 import com.mercadopago.client.preference.*;
 import com.mercadopago.resources.payment.Payment;
 import com.mercadopago.resources.preference.Preference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -21,6 +23,8 @@ import java.util.List;
 
 @Service
 public class PagamentoService {
+
+    private static final Logger log = LoggerFactory.getLogger(PagamentoService.class);
 
     private final PreferenceClient preferenceClient;
     private final PaymentClient paymentClient;
@@ -113,12 +117,28 @@ public class PagamentoService {
     }
 
     public void processarNotificacao(String paymentIdStr) throws Exception {
-        Long paymentId = Long.valueOf(paymentIdStr);
-        Payment payment = paymentClient.get(paymentId);
+        Long paymentId;
+        try {
+            paymentId = Long.valueOf(paymentIdStr);
+        } catch (NumberFormatException e) {
+            log.warn("Notificação de pagamento recebida com ID inválido: '{}'", paymentIdStr);
+            return;
+        }
 
-        Long pedidoId = Long.valueOf(payment.getExternalReference());
+        Payment payment = paymentClient.get(paymentId);
+        log.info("Notificação de pagamento {} recebida com status '{}'", paymentId, payment.getStatus());
+
+        Long pedidoId;
+        try {
+            pedidoId = Long.valueOf(payment.getExternalReference());
+        } catch (NumberFormatException | NullPointerException e) {
+            log.warn("Pagamento {} possui externalReference inválida: '{}'", paymentId, payment.getExternalReference());
+            return;
+        }
+
         Pedido pedido = pedidoRepository.findById(pedidoId).orElse(null);
         if (pedido == null) {
+            log.warn("Pagamento {} referencia pedido {} que não foi encontrado", paymentId, pedidoId);
             return;
         }
 
@@ -132,6 +152,8 @@ public class PagamentoService {
         boolean jaProcessado = paymentIdStr.equals(pedido.getMpPaymentId())
             && reflete(pedido.getStatus(), statusMp);
         if (jaProcessado) {
+            log.info("Notificação de pagamento {} para o pedido {} já foi processada — ignorando",
+                paymentIdStr, pedido.getId());
             return;
         }
 
@@ -146,6 +168,8 @@ public class PagamentoService {
             }
             default -> { /* pending/in_process: mantém AGUARDANDO_PAGAMENTO, só grava o paymentId */ }
         }
+        log.info("Pedido {} alterado para status {} via notificação de pagamento {}",
+            pedido.getId(), pedido.getStatus(), paymentIdStr);
         pedidoRepository.save(pedido);
     }
 
