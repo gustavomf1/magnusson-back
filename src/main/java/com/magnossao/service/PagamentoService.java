@@ -10,6 +10,10 @@ import com.mercadopago.resources.preference.Preference;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
+import java.util.HexFormat;
 import java.util.List;
 
 @Service
@@ -75,5 +79,40 @@ public class PagamentoService {
             .unitPrice(item.getPrecoUnitario())
             .currencyId("BRL")
             .build();
+    }
+
+    public boolean validarAssinatura(String signatureHeader, String requestId, String dataId) {
+        if (signatureHeader == null || requestId == null || dataId == null) {
+            return false;
+        }
+        String ts = null;
+        String v1 = null;
+        for (String parte : signatureHeader.split(",")) {
+            String[] kv = parte.trim().split("=", 2);
+            if (kv.length != 2) continue;
+            if (kv[0].trim().equals("ts")) ts = kv[1].trim();
+            if (kv[0].trim().equals("v1")) v1 = kv[1].trim();
+        }
+        if (ts == null || v1 == null) {
+            return false;
+        }
+        String manifest = "id:" + dataId.toLowerCase() + ";request-id:" + requestId + ";ts:" + ts + ";";
+        try {
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(webhookSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            String hashCalculado = HexFormat.of().formatHex(mac.doFinal(manifest.getBytes(StandardCharsets.UTF_8)));
+            return hashCalculado.equalsIgnoreCase(v1);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Stub temporário: a implementação real (consulta ao MP, atualização de status do pedido,
+     * baixa de estoque, etc.) será feita na Task 6. Por ora apenas permite que o
+     * WebhookMercadoPagoController compile e seja testável via @MockitoBean.
+     */
+    public void processarNotificacao(String paymentIdStr) throws Exception {
+        throw new UnsupportedOperationException("processarNotificacao será implementado na Task 6");
     }
 }

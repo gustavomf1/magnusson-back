@@ -73,4 +73,26 @@ class PagamentoServiceTest {
         assertThat(initPoint).isEqualTo("https://mp.example/checkout/pref-123");
         assertThat(pedido.getMpPreferenceId()).isEqualTo("pref-123");
     }
+
+    @Test
+    void validaAssinaturaCorretamenteComHmacSha256() throws Exception {
+        String secret = "dev-only-insecure-webhook-secret";
+        String dataId = "123456";
+        String requestId = "req-abc";
+        String ts = "1700000000";
+        String manifest = "id:" + dataId + ";request-id:" + requestId + ";ts:" + ts + ";";
+
+        javax.crypto.Mac mac = javax.crypto.Mac.getInstance("HmacSHA256");
+        mac.init(new javax.crypto.spec.SecretKeySpec(secret.getBytes(), "HmacSHA256"));
+        String hash = java.util.HexFormat.of().formatHex(mac.doFinal(manifest.getBytes()));
+
+        String signatureHeader = "ts=" + ts + ",v1=" + hash;
+
+        assertThat(pagamentoService.validarAssinatura(signatureHeader, requestId, dataId)).isTrue();
+    }
+
+    @Test
+    void rejeitaAssinaturaComHashIncorreto() {
+        assertThat(pagamentoService.validarAssinatura("ts=1700000000,v1=hash-invalido", "req-abc", "123456")).isFalse();
+    }
 }
