@@ -1,14 +1,18 @@
 package com.magnossao.service;
 
+import com.magnossao.dto.response.EstornoResponse;
+import com.magnossao.entity.Estorno;
 import com.magnossao.entity.Pedido;
 import com.magnossao.entity.PedidoItem;
 import com.magnossao.entity.StatusPedido;
+import com.magnossao.exception.EstornoInvalidoException;
 import com.magnossao.repository.EstornoRepository;
 import com.magnossao.repository.PedidoRepository;
 import com.mercadopago.client.payment.PaymentClient;
 import com.mercadopago.client.payment.PaymentRefundClient;
 import com.mercadopago.client.preference.*;
 import com.mercadopago.resources.payment.Payment;
+import com.mercadopago.resources.payment.PaymentRefund;
 import com.mercadopago.resources.preference.Preference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,6 +21,7 @@ import org.springframework.stereotype.Service;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.util.HexFormat;
@@ -175,6 +180,45 @@ public class PagamentoService {
             estoqueService.restaurarEstoque(item.getSku().getId(), item.getQuantidade());
         }
         pedidoRepository.save(pedido);
+    }
+
+    public EstornoResponse estornarItem(Pedido pedido, Long pedidoItemId, int quantidade) throws Exception {
+        if (pedido.getStatus() != StatusPedido.PAGO && pedido.getStatus() != StatusPedido.PARCIALMENTE_ESTORNADO) {
+            throw new EstornoInvalidoException("Pedido não está em status PAGO ou PARCIALMENTE_ESTORNADO");
+        }
+
+        PedidoItem item = pedido.getItens().stream()
+            .filter(i -> i.getId().equals(pedidoItemId))
+            .findFirst()
+            .orElseThrow(() -> new EstornoInvalidoException("Item não pertence ao pedido: " + pedidoItemId));
+
+        int jaEstornado = estornoRepository.somaQuantidadeEstornadaPorItem(pedidoItemId);
+        if (quantidade <= 0 || quantidade > item.getQuantidade() - jaEstornado) {
+            throw new EstornoInvalidoException("Quantidade a estornar excede o disponível para o item: " + pedidoItemId);
+        }
+
+        BigDecimal valor = item.getPrecoUnitario().multiply(BigDecimal.valueOf(quantidade));
+
+        PaymentRefund refund = paymentRefundClient.refund(Long.valueOf(pedido.getMpPaymentId()), valor);
+
+        Estorno estorno = new Estorno();
+        estorno.setPedido(pedido);
+        estorno.setPedidoItem(item);
+        estorno.setSku(item.getSku());
+        estorno.setQuantidade(quantidade);
+        estorno.setValor(valor);
+        estorno.setMpRefundId(refund.getId().toString());
+        estornoRepository.save(estorno);
+
+        estoqueService.restaurarEstoque(item.getSku().getId(), quantidade);
+
+        pedido.setValorEstornado(pedido.getValorEstornado().add(valor));
+        pedido.setStatus(pedido.getValorEstornado().compareTo(pedido.getTotal()) >= 0
+            ? StatusPedido.ESTORNADO
+            : StatusPedido.PARCIALMENTE_ESTORNADO);
+        pedidoRepository.save(pedido);
+
+        return EstornoResponse.from(estorno);
     }
 
     private void aplicarStatusDoPagamento(Pedido pedido, Payment payment) {

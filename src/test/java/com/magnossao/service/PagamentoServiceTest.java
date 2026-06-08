@@ -6,7 +6,9 @@ import com.mercadopago.client.payment.PaymentClient;
 import com.mercadopago.client.payment.PaymentRefundClient;
 import com.mercadopago.client.preference.PreferenceClient;
 import com.mercadopago.resources.payment.Payment;
+import com.mercadopago.resources.payment.PaymentRefund;
 import com.mercadopago.resources.preference.Preference;
+import com.magnossao.exception.EstornoInvalidoException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,6 +19,8 @@ import java.math.BigDecimal;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -164,5 +168,75 @@ class PagamentoServiceTest {
 
         org.assertj.core.api.Assertions.assertThatCode(() -> pagamentoService.processarNotificacao("777"))
             .doesNotThrowAnyException();
+    }
+
+    private PaymentRefund refundFake(long id) {
+        PaymentRefund refund = org.mockito.Mockito.mock(PaymentRefund.class);
+        org.mockito.Mockito.lenient().when(refund.getId()).thenReturn(id);
+        return refund;
+    }
+
+    @Test
+    void estornaItemParcialmenteEAtualizaStatusEEstoque() throws Exception {
+        Pedido pedido = pedidoComUmItem();
+        pedido.setStatus(StatusPedido.PAGO);
+        pedido.setMpPaymentId("555");
+        PedidoItem item = pedido.getItens().get(0);
+
+        when(estornoRepository.somaQuantidadeEstornadaPorItem(item.getId())).thenReturn(0);
+
+        PaymentRefund refundFake = refundFake(9001L);
+        when(paymentRefundClient.refund(eq(555L), any(BigDecimal.class))).thenReturn(refundFake);
+        when(estornoRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        var resposta = pagamentoService.estornarItem(pedido, item.getId(), 1);
+
+        assertThat(resposta.quantidade()).isEqualTo(1);
+        assertThat(resposta.valor()).isEqualByComparingTo(new BigDecimal("199.90"));
+        assertThat(pedido.getStatus()).isEqualTo(StatusPedido.PARCIALMENTE_ESTORNADO);
+        assertThat(pedido.getValorEstornado()).isEqualByComparingTo(new BigDecimal("199.90"));
+        org.mockito.Mockito.verify(estoqueService).restaurarEstoque(10L, 1);
+    }
+
+    @Test
+    void estornoQueAtinge100PorCentoMudaStatusParaEstornado() throws Exception {
+        Pedido pedido = pedidoComUmItem();
+        pedido.setStatus(StatusPedido.PARCIALMENTE_ESTORNADO);
+        pedido.setMpPaymentId("555");
+        pedido.setValorEstornado(new BigDecimal("199.90"));
+        PedidoItem item = pedido.getItens().get(0);
+
+        when(estornoRepository.somaQuantidadeEstornadaPorItem(item.getId())).thenReturn(1);
+
+        PaymentRefund refundFake = refundFake(9002L);
+        when(paymentRefundClient.refund(eq(555L), any(BigDecimal.class))).thenReturn(refundFake);
+        when(estornoRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        pagamentoService.estornarItem(pedido, item.getId(), 1);
+
+        assertThat(pedido.getStatus()).isEqualTo(StatusPedido.ESTORNADO);
+        assertThat(pedido.getValorEstornado()).isEqualByComparingTo(new BigDecimal("399.80"));
+    }
+
+    @Test
+    void rejeitaEstornoDeQuantidadeMaiorQueADisponivel() {
+        Pedido pedido = pedidoComUmItem();
+        pedido.setStatus(StatusPedido.PAGO);
+        PedidoItem item = pedido.getItens().get(0);
+
+        when(estornoRepository.somaQuantidadeEstornadaPorItem(item.getId())).thenReturn(1);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> pagamentoService.estornarItem(pedido, item.getId(), 2))
+            .isInstanceOf(EstornoInvalidoException.class);
+    }
+
+    @Test
+    void rejeitaEstornoDePedidoQueNaoEstaPagoOuParcialmenteEstornado() {
+        Pedido pedido = pedidoComUmItem();
+        pedido.setStatus(StatusPedido.AGUARDANDO_PAGAMENTO);
+        PedidoItem item = pedido.getItens().get(0);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> pagamentoService.estornarItem(pedido, item.getId(), 1))
+            .isInstanceOf(EstornoInvalidoException.class);
     }
 }
