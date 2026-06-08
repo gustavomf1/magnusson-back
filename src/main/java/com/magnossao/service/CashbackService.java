@@ -9,6 +9,7 @@ import com.magnossao.entity.Produto;
 import com.magnossao.entity.RegraCashback;
 import com.magnossao.entity.StatusCupom;
 import com.magnossao.entity.Usuario;
+import com.magnossao.exception.CupomInvalidoException;
 import com.magnossao.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,7 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -95,5 +97,40 @@ public class CashbackService {
 
             cupomRepository.save(cupom);
         }
+    }
+
+    public record ResultadoCupom(BigDecimal desconto, Cupom cupom) {
+    }
+
+    @Transactional
+    public ResultadoCupom validarEAplicar(Usuario usuario, Long cupomId, BigDecimal totalItem, Set<Long> cupomIdsAplicados) {
+        Cupom cupom = cupomRepository.findById(cupomId)
+                .orElseThrow(() -> new CupomInvalidoException("Cupom não encontrado"));
+
+        if (!cupom.getUsuario().getId().equals(usuario.getId())) {
+            throw new CupomInvalidoException("Cupom não pertence a este usuário");
+        }
+        if (cupom.getStatus() != StatusCupom.ATIVO) {
+            throw new CupomInvalidoException("Cupom não está ativo");
+        }
+        if (cupom.getExpiraEm() != null && cupom.getExpiraEm().isBefore(LocalDateTime.now())) {
+            throw new CupomInvalidoException("Cupom expirado");
+        }
+        if (!cupomIdsAplicados.add(cupomId)) {
+            throw new CupomInvalidoException("Cupom já aplicado neste pedido");
+        }
+
+        BigDecimal desconto = cupom.getValor().min(totalItem);
+        cupom.setStatus(StatusCupom.USADO);
+        cupomRepository.save(cupom);
+
+        return new ResultadoCupom(desconto, cupom);
+    }
+
+    @Transactional
+    public void confirmarUso(Cupom cupom, PedidoItem itemPersistido) {
+        cupom.setPedidoItemUso(itemPersistido);
+        cupomRepository.save(cupom);
+        itemPersistido.setCupomAplicado(cupom);
     }
 }

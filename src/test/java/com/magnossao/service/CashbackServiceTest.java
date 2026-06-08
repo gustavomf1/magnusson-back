@@ -10,6 +10,7 @@ import com.magnossao.entity.Sku;
 import com.magnossao.entity.StatusCupom;
 import com.magnossao.entity.StatusPedido;
 import com.magnossao.entity.Usuario;
+import com.magnossao.exception.CupomInvalidoException;
 import com.magnossao.repository.CupomRepository;
 import com.magnossao.repository.PedidoRepository;
 import com.magnossao.repository.ProdutoRepository;
@@ -23,9 +24,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -183,5 +188,103 @@ class CashbackServiceTest {
 
         verify(pedidoRepository, never()).findById(any());
         verify(cupomRepository, never()).save(any());
+    }
+
+    private Cupom cupomAtivo(Usuario dono, BigDecimal valor) {
+        Cupom cupom = new Cupom();
+        cupom.setId(900L);
+        cupom.setUsuario(dono);
+        cupom.setValor(valor);
+        cupom.setStatus(StatusCupom.ATIVO);
+        return cupom;
+    }
+
+    @Test
+    void validarEAplicarAplicaDescontoLimitadoAoValorDoItem() {
+        Usuario usuario = new Usuario();
+        usuario.setId(9L);
+        Cupom cupom = cupomAtivo(usuario, BigDecimal.valueOf(50));
+
+        when(cupomRepository.findById(900L)).thenReturn(Optional.of(cupom));
+        when(cupomRepository.save(any(Cupom.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        var resultado = cashbackService.validarEAplicar(usuario, 900L, BigDecimal.valueOf(30), new HashSet<>());
+
+        assertThat(resultado.desconto()).isEqualByComparingTo("30");
+        assertThat(cupom.getStatus()).isEqualTo(StatusCupom.USADO);
+        verify(cupomRepository).save(cupom);
+    }
+
+    @Test
+    void validarEAplicarRejeitaCupomDeOutroUsuario() {
+        Usuario dono = new Usuario();
+        dono.setId(9L);
+        Usuario outro = new Usuario();
+        outro.setId(10L);
+        Cupom cupom = cupomAtivo(dono, BigDecimal.valueOf(50));
+
+        when(cupomRepository.findById(900L)).thenReturn(Optional.of(cupom));
+
+        assertThatThrownBy(() -> cashbackService.validarEAplicar(outro, 900L, BigDecimal.valueOf(30), new HashSet<>()))
+                .isInstanceOf(CupomInvalidoException.class);
+    }
+
+    @Test
+    void validarEAplicarRejeitaCupomJaUsado() {
+        Usuario usuario = new Usuario();
+        usuario.setId(9L);
+        Cupom cupom = cupomAtivo(usuario, BigDecimal.valueOf(50));
+        cupom.setStatus(StatusCupom.USADO);
+
+        when(cupomRepository.findById(900L)).thenReturn(Optional.of(cupom));
+
+        assertThatThrownBy(() -> cashbackService.validarEAplicar(usuario, 900L, BigDecimal.valueOf(30), new HashSet<>()))
+                .isInstanceOf(CupomInvalidoException.class);
+    }
+
+    @Test
+    void validarEAplicarRejeitaCupomExpirado() {
+        Usuario usuario = new Usuario();
+        usuario.setId(9L);
+        Cupom cupom = cupomAtivo(usuario, BigDecimal.valueOf(50));
+        cupom.setExpiraEm(LocalDateTime.now().minusDays(1));
+
+        when(cupomRepository.findById(900L)).thenReturn(Optional.of(cupom));
+
+        assertThatThrownBy(() -> cashbackService.validarEAplicar(usuario, 900L, BigDecimal.valueOf(30), new HashSet<>()))
+                .isInstanceOf(CupomInvalidoException.class);
+    }
+
+    @Test
+    void validarEAplicarRejeitaCupomRepetidoNoMesmoPedido() {
+        Usuario usuario = new Usuario();
+        usuario.setId(9L);
+        Cupom cupom = cupomAtivo(usuario, BigDecimal.valueOf(50));
+
+        when(cupomRepository.findById(900L)).thenReturn(Optional.of(cupom));
+
+        Set<Long> jaAplicados = new HashSet<>();
+        jaAplicados.add(900L);
+
+        assertThatThrownBy(() -> cashbackService.validarEAplicar(usuario, 900L, BigDecimal.valueOf(30), jaAplicados))
+                .isInstanceOf(CupomInvalidoException.class);
+    }
+
+    @Test
+    void confirmarUsoLigaCupomAoItemPersistido() {
+        Usuario usuario = new Usuario();
+        usuario.setId(9L);
+        Cupom cupom = cupomAtivo(usuario, BigDecimal.valueOf(50));
+
+        PedidoItem item = new PedidoItem();
+        item.setId(501L);
+
+        when(cupomRepository.save(any(Cupom.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        cashbackService.confirmarUso(cupom, item);
+
+        assertThat(cupom.getPedidoItemUso()).isSameAs(item);
+        assertThat(item.getCupomAplicado()).isSameAs(cupom);
+        verify(cupomRepository).save(cupom);
     }
 }
