@@ -222,7 +222,8 @@ public class ProdutoService {
             p.getBeneficios().stream().map(b -> new BeneficioDto(b.getId(), b.getIconeNome(), b.getTitulo(), b.getCorpo(), b.getOrdem())).toList(),
             p.getDetalhes().stream().map(d -> new DetalheDto(d.getId(), d.getLabel(), d.getUrlImagem(), d.getAlt(), d.getOrdem())).toList(),
             p.getReviews().stream().map(r -> new ReviewDto(r.getId(), r.getCitacao(), r.getNome(), r.getCidade())).toList(),
-            p.getFaqs().stream().map(f -> new FaqDto(f.getId(), f.getPergunta(), f.getResposta(), f.getOrdem())).toList()
+            p.getFaqs().stream().map(f -> new FaqDto(f.getId(), f.getPergunta(), f.getResposta(), f.getOrdem())).toList(),
+            p.getRegraCashback() != null ? RegraCashbackInfoDto.from(p.getRegraCashback()) : null
         );
     }
 }
