@@ -2,10 +2,13 @@ package com.magnossao.service;
 
 import com.magnossao.entity.Pedido;
 import com.magnossao.entity.PedidoItem;
+import com.magnossao.entity.StatusPedido;
 import com.magnossao.repository.EstornoRepository;
+import com.magnossao.repository.PedidoRepository;
 import com.mercadopago.client.payment.PaymentClient;
 import com.mercadopago.client.payment.PaymentRefundClient;
 import com.mercadopago.client.preference.*;
+import com.mercadopago.resources.payment.Payment;
 import com.mercadopago.resources.preference.Preference;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -24,6 +27,7 @@ public class PagamentoService {
     private final PaymentRefundClient paymentRefundClient;
     private final EstoqueService estoqueService;
     private final EstornoRepository estornoRepository;
+    private final PedidoRepository pedidoRepository;
     private final String baseUrl;
     private final String frontendUrl;
     private final String webhookSecret;
@@ -31,7 +35,7 @@ public class PagamentoService {
 
     public PagamentoService(PreferenceClient preferenceClient, PaymentClient paymentClient,
                             PaymentRefundClient paymentRefundClient, EstoqueService estoqueService,
-                            EstornoRepository estornoRepository,
+                            EstornoRepository estornoRepository, PedidoRepository pedidoRepository,
                             @Value("${app.base-url}") String baseUrl,
                             @Value("${app.cors.origin}") String frontendUrl,
                             @Value("${mercadopago.webhook-secret}") String webhookSecret,
@@ -41,6 +45,7 @@ public class PagamentoService {
         this.paymentRefundClient = paymentRefundClient;
         this.estoqueService = estoqueService;
         this.estornoRepository = estornoRepository;
+        this.pedidoRepository = pedidoRepository;
         this.baseUrl = baseUrl;
         this.frontendUrl = frontendUrl;
         this.webhookSecret = webhookSecret;
@@ -107,12 +112,47 @@ public class PagamentoService {
         }
     }
 
-    /**
-     * Stub temporário: a implementação real (consulta ao MP, atualização de status do pedido,
-     * baixa de estoque, etc.) será feita na Task 6. Por ora apenas permite que o
-     * WebhookMercadoPagoController compile e seja testável via @MockitoBean.
-     */
     public void processarNotificacao(String paymentIdStr) throws Exception {
-        throw new UnsupportedOperationException("processarNotificacao será implementado na Task 6");
+        Long paymentId = Long.valueOf(paymentIdStr);
+        Payment payment = paymentClient.get(paymentId);
+        aplicarStatusDoPagamento(payment);
+    }
+
+    private void aplicarStatusDoPagamento(Payment payment) {
+        Long pedidoId = Long.valueOf(payment.getExternalReference());
+        Pedido pedido = pedidoRepository.findById(pedidoId).orElse(null);
+        if (pedido == null) {
+            return;
+        }
+
+        String paymentIdStr = payment.getId().toString();
+        String statusMp = payment.getStatus();
+
+        boolean jaProcessado = paymentIdStr.equals(pedido.getMpPaymentId())
+            && reflete(pedido.getStatus(), statusMp);
+        if (jaProcessado) {
+            return;
+        }
+
+        pedido.setMpPaymentId(paymentIdStr);
+        switch (statusMp) {
+            case "approved" -> pedido.setStatus(StatusPedido.PAGO);
+            case "rejected", "cancelled" -> {
+                pedido.setStatus(StatusPedido.CANCELADO);
+                for (PedidoItem item : pedido.getItens()) {
+                    estoqueService.restaurarEstoque(item.getSku().getId(), item.getQuantidade());
+                }
+            }
+            default -> { /* pending/in_process: mantém AGUARDANDO_PAGAMENTO, só grava o paymentId */ }
+        }
+        pedidoRepository.save(pedido);
+    }
+
+    private boolean reflete(StatusPedido status, String statusMp) {
+        return switch (statusMp) {
+            case "approved" -> status == StatusPedido.PAGO;
+            case "rejected", "cancelled" -> status == StatusPedido.CANCELADO;
+            default -> status == StatusPedido.AGUARDANDO_PAGAMENTO;
+        };
     }
 }

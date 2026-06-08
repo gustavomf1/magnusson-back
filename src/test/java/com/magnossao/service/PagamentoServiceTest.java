@@ -1,9 +1,11 @@
 package com.magnossao.service;
 
 import com.magnossao.entity.*;
+import com.magnossao.repository.PedidoRepository;
 import com.mercadopago.client.payment.PaymentClient;
 import com.mercadopago.client.payment.PaymentRefundClient;
 import com.mercadopago.client.preference.PreferenceClient;
+import com.mercadopago.resources.payment.Payment;
 import com.mercadopago.resources.preference.Preference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -12,6 +14,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
@@ -24,6 +27,7 @@ class PagamentoServiceTest {
     @Mock PaymentRefundClient paymentRefundClient;
     @Mock EstoqueService estoqueService;
     @Mock com.magnossao.repository.EstornoRepository estornoRepository;
+    @Mock PedidoRepository pedidoRepository;
     @Mock Preference preferenceFake;
 
     PagamentoService pagamentoService;
@@ -32,7 +36,7 @@ class PagamentoServiceTest {
     void setUp() {
         pagamentoService = new PagamentoService(
             preferenceClient, paymentClient, paymentRefundClient,
-            estoqueService, estornoRepository,
+            estoqueService, estornoRepository, pedidoRepository,
             "http://localhost:8080", "http://localhost:3000",
             "dev-only-insecure-webhook-secret", 72);
     }
@@ -94,5 +98,71 @@ class PagamentoServiceTest {
     @Test
     void rejeitaAssinaturaComHashIncorreto() {
         assertThat(pagamentoService.validarAssinatura("ts=1700000000,v1=hash-invalido", "req-abc", "123456")).isFalse();
+    }
+
+    private Payment paymentFake(long id, String status, String externalReference) {
+        Payment payment = org.mockito.Mockito.mock(Payment.class);
+        org.mockito.Mockito.lenient().when(payment.getId()).thenReturn(id);
+        org.mockito.Mockito.lenient().when(payment.getStatus()).thenReturn(status);
+        org.mockito.Mockito.lenient().when(payment.getExternalReference()).thenReturn(externalReference);
+        return payment;
+    }
+
+    @Test
+    void webhookAprovadoMudaPedidoParaPagoEGravaPaymentId() throws Exception {
+        Pedido pedido = pedidoComUmItem();
+        pedido.setStatus(StatusPedido.AGUARDANDO_PAGAMENTO);
+        when(pedidoRepository.findById(42L)).thenReturn(Optional.of(pedido));
+
+        Payment payment = paymentFake(555L, "approved", "42");
+        when(paymentClient.get(555L)).thenReturn(payment);
+
+        pagamentoService.processarNotificacao("555");
+
+        assertThat(pedido.getStatus()).isEqualTo(StatusPedido.PAGO);
+        assertThat(pedido.getMpPaymentId()).isEqualTo("555");
+        org.mockito.Mockito.verify(pedidoRepository).save(pedido);
+    }
+
+    @Test
+    void webhookRejeitadoCancelaPedidoERestauraEstoque() throws Exception {
+        Pedido pedido = pedidoComUmItem();
+        pedido.setStatus(StatusPedido.AGUARDANDO_PAGAMENTO);
+        when(pedidoRepository.findById(42L)).thenReturn(Optional.of(pedido));
+
+        Payment payment = paymentFake(556L, "rejected", "42");
+        when(paymentClient.get(556L)).thenReturn(payment);
+
+        pagamentoService.processarNotificacao("556");
+
+        assertThat(pedido.getStatus()).isEqualTo(StatusPedido.CANCELADO);
+        org.mockito.Mockito.verify(estoqueService).restaurarEstoque(10L, 2);
+    }
+
+    @Test
+    void webhookDuplicadoEhIdempotente() throws Exception {
+        Pedido pedido = pedidoComUmItem();
+        pedido.setStatus(StatusPedido.PAGO);
+        pedido.setMpPaymentId("555");
+        when(pedidoRepository.findById(42L)).thenReturn(Optional.of(pedido));
+
+        Payment payment = paymentFake(555L, "approved", "42");
+        when(paymentClient.get(555L)).thenReturn(payment);
+
+        pagamentoService.processarNotificacao("555");
+
+        org.mockito.Mockito.verify(pedidoRepository, org.mockito.Mockito.never()).save(org.mockito.ArgumentMatchers.any());
+        org.mockito.Mockito.verify(estoqueService, org.mockito.Mockito.never()).restaurarEstoque(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyInt());
+    }
+
+    @Test
+    void webhookDePedidoInexistenteNaoLancaErro() throws Exception {
+        when(pedidoRepository.findById(999L)).thenReturn(Optional.empty());
+
+        Payment payment = paymentFake(777L, "approved", "999");
+        when(paymentClient.get(777L)).thenReturn(payment);
+
+        org.assertj.core.api.Assertions.assertThatCode(() -> pagamentoService.processarNotificacao("777"))
+            .doesNotThrowAnyException();
     }
 }
