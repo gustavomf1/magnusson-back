@@ -12,6 +12,7 @@ import com.magnossao.entity.Usuario;
 import com.magnossao.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -62,7 +63,7 @@ public class CashbackService {
         regraCashbackRepository.delete(regra);
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void gerarCupons(Pedido pedido) {
         if (pedido.getUsuario() == null) {
             return;
