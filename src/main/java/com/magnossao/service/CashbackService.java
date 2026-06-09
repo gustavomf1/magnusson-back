@@ -136,7 +136,7 @@ public class CashbackService {
         // e o dirty-check na hora do flush persistirá a mudança automaticamente
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void cancelarCuponsDoItem(Long pedidoItemOrigemId) {
         List<Cupom> ativos = cupomRepository.findByPedidoItemOrigemIdAndStatus(pedidoItemOrigemId, StatusCupom.ATIVO);
         for (Cupom cupom : ativos) {
