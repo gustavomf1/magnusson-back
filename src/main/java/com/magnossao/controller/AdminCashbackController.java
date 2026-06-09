@@ -1,6 +1,7 @@
 package com.magnossao.controller;
 
 import com.magnossao.dto.request.RegraCashbackRequest;
+import com.magnossao.dto.response.CupomResponse;
 import com.magnossao.dto.response.RegraCashbackResponse;
 import com.magnossao.service.CashbackService;
 import lombok.RequiredArgsConstructor;
@@ -30,5 +31,10 @@ public class AdminCashbackController {
     public ResponseEntity<Void> removerRegra(@PathVariable Long produtoId) {
         cashbackService.removerRegra(produtoId);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/cupons")
+    public List<CupomResponse> listarCupons() {
+        return cashbackService.listarCuponsAdmin();
     }
 }

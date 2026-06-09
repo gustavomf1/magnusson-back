@@ -314,4 +314,43 @@ class CashbackServiceTest {
         assertThat(item.getCupomAplicado()).isSameAs(cupom);
         verify(cupomRepository).save(cupom);
     }
+
+    @Test
+    void listarCarteiraRetornaCuponsDoUsuarioOrdenadosPeloRepositorio() {
+        Usuario usuario = new Usuario();
+        usuario.setId(9L);
+        usuario.setNome("Teste");
+
+        Produto produto = new Produto();
+        produto.setId(7L);
+        Sku sku = new Sku();
+        sku.setProduto(produto);
+
+        Pedido pedido = new Pedido();
+        pedido.setId(50L);
+        PedidoItem item = new PedidoItem();
+        item.setId(500L);
+        item.setPedido(pedido);
+        item.setSku(sku);
+
+        Cupom cupom = cupomAtivo(usuario, BigDecimal.TEN);
+        cupom.setPedidoItemOrigem(item);
+        when(usuarioRepository.findById(9L)).thenReturn(Optional.of(usuario));
+        when(cupomRepository.findCarteiraByUsuarioId(9L)).thenReturn(List.of(cupom));
+
+        var carteira = cashbackService.listarCarteira(9L);
+
+        assertThat(carteira).hasSize(1);
+        assertThat(carteira.get(0).id()).isEqualTo(cupom.getId());
+    }
+
+    @Test
+    void listarCuponsAdminDelegaParaORepositorio() {
+        when(cupomRepository.findAll()).thenReturn(List.of());
+
+        var cupons = cashbackService.listarCuponsAdmin();
+
+        assertThat(cupons).isEmpty();
+        verify(cupomRepository).findAll();
+    }
 }

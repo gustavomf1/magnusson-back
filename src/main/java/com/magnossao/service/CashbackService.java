@@ -1,6 +1,7 @@
 package com.magnossao.service;
 
 import com.magnossao.dto.request.RegraCashbackRequest;
+import com.magnossao.dto.response.CupomResponse;
 import com.magnossao.dto.response.RegraCashbackResponse;
 import com.magnossao.entity.Cupom;
 import com.magnossao.entity.Pedido;
@@ -143,5 +144,21 @@ public class CashbackService {
             cupom.setStatus(StatusCupom.CANCELADO);
             cupomRepository.save(cupom);
         }
+    }
+
+    @Transactional
+    public List<CupomResponse> listarCarteira(Long usuarioId) {
+        usuarioRepository.findById(usuarioId)
+                .orElseThrow(() -> new NoSuchElementException("Usuário não encontrado: " + usuarioId));
+        return cupomRepository.findCarteiraByUsuarioId(usuarioId).stream()
+                .map(CupomResponse::from)
+                .toList();
+    }
+
+    @Transactional
+    public List<CupomResponse> listarCuponsAdmin() {
+        return cupomRepository.findAll().stream()
+                .map(CupomResponse::from)
+                .toList();
     }
 }
