@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "storage")
 public class StorageProperties {
     private String endpoint;
+    private String presignEndpoint;
     private String bucket = "magnossao";
     private String accessKey;
     private String secretKey;
@@ -15,6 +16,8 @@ public class StorageProperties {
 
     public String getEndpoint() { return endpoint; }
     public void setEndpoint(String endpoint) { this.endpoint = endpoint; }
+    public String getPresignEndpoint() { return presignEndpoint != null ? presignEndpoint : endpoint; }
+    public void setPresignEndpoint(String presignEndpoint) { this.presignEndpoint = presignEndpoint; }
     public String getBucket() { return bucket; }
     public void setBucket(String bucket) { this.bucket = bucket; }
     public String getAccessKey() { return accessKey; }

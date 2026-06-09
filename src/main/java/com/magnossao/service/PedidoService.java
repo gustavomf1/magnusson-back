@@ -8,11 +8,15 @@ import com.magnossao.exception.EstoqueInsuficienteException;
 import com.magnossao.exception.PedidoNaoEncontradoException;
 import com.magnossao.repository.PedidoRepository;
 import com.magnossao.repository.SkuRepository;
+import jakarta.persistence.criteria.Predicate;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -169,8 +173,23 @@ public class PedidoService {
     @Transactional
     public Page<PedidoResumoResponse> listarAdmin(StatusPedido status, OffsetDateTime inicio,
                                                    OffsetDateTime fim, String cliente, Pageable pageable) {
-        return pedidoRepository.findComFiltros(status, inicio, fim, cliente, pageable)
-                .map(PedidoResumoResponse::from);
+        if (pageable.getSort().isUnsorted()) {
+            pageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+                    Sort.by(Sort.Direction.DESC, "criadoEm"));
+        }
+        Specification<Pedido> spec = (root, query, cb) -> {
+            java.util.List<Predicate> predicates = new java.util.ArrayList<>();
+            if (status != null) predicates.add(cb.equal(root.get("status"), status));
+            if (inicio != null) predicates.add(cb.greaterThanOrEqualTo(root.get("criadoEm"), inicio));
+            if (fim != null) predicates.add(cb.lessThanOrEqualTo(root.get("criadoEm"), fim));
+            if (cliente != null && !cliente.isBlank()) {
+                predicates.add(cb.like(
+                        cb.lower(root.get("dadosNf").get("nomeCliente")),
+                        "%" + cliente.toLowerCase() + "%"));
+            }
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+        return pedidoRepository.findAll(spec, pageable).map(PedidoResumoResponse::from);
     }
 
     @Transactional

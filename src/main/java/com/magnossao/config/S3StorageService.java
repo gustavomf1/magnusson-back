@@ -8,6 +8,7 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
+import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
@@ -41,9 +42,12 @@ public class S3StorageService implements StorageService {
             .region(Region.of(props.getRegion()));
 
         if (props.getEndpoint() != null && !props.getEndpoint().isBlank()) {
-            URI uri = URI.create(props.getEndpoint());
-            clientBuilder.endpointOverride(uri).forcePathStyle(true);
-            presignerBuilder.endpointOverride(uri);
+            clientBuilder.endpointOverride(URI.create(props.getEndpoint())).forcePathStyle(true);
+        }
+        presignerBuilder.serviceConfiguration(
+            S3Configuration.builder().pathStyleAccessEnabled(true).build());
+        if (props.getPresignEndpoint() != null && !props.getPresignEndpoint().isBlank()) {
+            presignerBuilder.endpointOverride(URI.create(props.getPresignEndpoint()));
         }
 
         this.s3Client = clientBuilder.build();
