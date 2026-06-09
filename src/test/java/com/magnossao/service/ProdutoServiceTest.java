@@ -1,5 +1,6 @@
 package com.magnossao.service;
 
+import com.magnossao.dto.response.ProdutoResumoResponse;
 import com.magnossao.entity.Categoria;
 import com.magnossao.entity.Produto;
 import com.magnossao.entity.StatusProduto;
@@ -45,6 +46,8 @@ class ProdutoServiceTest {
         var resultado = produtoService.listarPublicados(null);
 
         assertThat(resultado).hasSize(2);
+        assertThat(resultado).extracting(ProdutoResumoResponse::nome)
+            .containsExactlyInAnyOrder("Polo Classic", "Camisa Oxford");
     }
 
     @Test

@@ -7,7 +7,6 @@ import com.magnossao.entity.Categoria;
 import com.magnossao.entity.StatusProduto;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.bind.annotation.RequestParam;
 import java.util.List;
 import java.util.NoSuchElementException;
 
