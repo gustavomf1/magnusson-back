@@ -19,10 +19,15 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class PedidoService {
+
+    private record ItemCupom(PedidoItem item, CashbackService.ResultadoCupom cupom) {
+    }
 
     private static final Logger log = LoggerFactory.getLogger(PedidoService.class);
 
@@ -32,16 +37,19 @@ public class PedidoService {
     private final CarrinhoService carrinhoService;
     private final TransactionTemplate txTemplate;
     private final PagamentoService pagamentoService;
+    private final CashbackService cashbackService;
 
     public PedidoService(PedidoRepository pedidoRepository, SkuRepository skuRepository,
                          EstoqueService estoqueService, CarrinhoService carrinhoService,
-                         TransactionTemplate txTemplate, PagamentoService pagamentoService) {
+                         TransactionTemplate txTemplate, PagamentoService pagamentoService,
+                         CashbackService cashbackService) {
         this.pedidoRepository = pedidoRepository;
         this.skuRepository = skuRepository;
         this.estoqueService = estoqueService;
         this.carrinhoService = carrinhoService;
         this.txTemplate = txTemplate;
         this.pagamentoService = pagamentoService;
+        this.cashbackService = cashbackService;
     }
 
     // SEM @Transactional externo: @Retryable do EstoqueService precisa de transação própria.
@@ -89,7 +97,10 @@ public class PedidoService {
             end.setUf(req.endereco().uf());
             pedido.setEndereco(end);
 
+            List<ItemCupom> itensComCupom = new ArrayList<>();
             BigDecimal total = BigDecimal.ZERO;
+            Set<Long> cupomIdsAplicados = new HashSet<>();
+
             for (var itemReq : req.itens()) {
                 // Reload SKU inside transaction so lazy associations are available
                 Sku sku = skuRepository.findById(itemReq.skuId()).orElseThrow();
@@ -102,11 +113,26 @@ public class PedidoService {
                 item.setPrecoUnitario(sku.getProduto().getPreco());
                 item.setQuantidade(itemReq.quantidade());
                 pedido.getItens().add(item);
-                total = total.add(sku.getProduto().getPreco().multiply(BigDecimal.valueOf(itemReq.quantidade())));
+
+                BigDecimal totalItem = sku.getProduto().getPreco().multiply(BigDecimal.valueOf(itemReq.quantidade()));
+                total = total.add(totalItem);
+
+                // Fase 1: validar e marcar cupom como USADO (antes do save — entidade transiente)
+                // DEVE executar dentro do txTemplate para que o rollback do cupom acompanhe o rollback do pedido
+                if (itemReq.cupomId() != null && usuario != null) {
+                    var resultado = cashbackService.validarEAplicar(usuario, itemReq.cupomId(), totalItem, cupomIdsAplicados);
+                    total = total.subtract(resultado.desconto());
+                    itensComCupom.add(new ItemCupom(item, resultado));
+                }
             }
             pedido.setTotal(total);
 
             Pedido salvoNaTx = pedidoRepository.save(pedido);
+
+            // Fase 2: ligar cupom ao item persistido (após o save — item já tem id)
+            for (ItemCupom ic : itensComCupom) {
+                cashbackService.confirmarUso(ic.cupom().cupom(), ic.item());
+            }
 
             if (usuario != null) {
                 carrinhoService.limparCarrinho(usuario.getId());

@@ -75,6 +75,9 @@ public class Produto {
     @OrderBy("ordem ASC")
     private List<ProdutoFaq> faqs = new ArrayList<>();
 
+    @OneToOne(mappedBy = "produto", cascade = CascadeType.ALL, orphanRemoval = true)
+    private RegraCashback regraCashback;
+
     @PreUpdate
     void preUpdate() { this.atualizadoEm = OffsetDateTime.now(); }
 }
