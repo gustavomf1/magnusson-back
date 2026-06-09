@@ -41,6 +41,10 @@ public class Produto {
     @Column(nullable = false, length = 20)
     private StatusProduto status = StatusProduto.RASCUNHO;
 
+    @Enumerated(EnumType.STRING)
+    @Column(length = 50)
+    private Categoria categoria;
+
     @Column(name = "criado_em", nullable = false, updatable = false)
     private OffsetDateTime criadoEm = OffsetDateTime.now();
 
