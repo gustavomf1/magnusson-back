@@ -1,6 +1,7 @@
 package com.magnossao.controller;
 
 import com.magnossao.dto.request.ProdutoRequest;
+import com.magnossao.entity.Categoria;
 import com.magnossao.entity.StatusProduto;
 import com.magnossao.service.ProdutoService;
 import com.magnossao.service.StorageService;
@@ -67,7 +68,7 @@ class ProdutoControllerIT {
     void buscarProdutoPublicadoPorSlugRetornaOk() {
         ProdutoRequest req = new ProdutoRequest(
             "test-slug-it", "Produto Teste IT", "Teste", "Col", BigDecimal.valueOf(100),
-            "Desc", "Desc SEO");
+            "Desc", "Desc SEO", Categoria.POLO);
         var criado = produtoService.criar(req);
         produtoService.mudarStatus(criado.id(), StatusProduto.PUBLICADO.name());
 
@@ -80,7 +81,7 @@ class ProdutoControllerIT {
     void buscarProdutoRascunhoPorSlugRetorna404() {
         ProdutoRequest req = new ProdutoRequest(
             "rascunho-slug-it", "Rascunho IT", "Rascunho", "Col", BigDecimal.valueOf(50),
-            "Desc", "SEO");
+            "Desc", "SEO", Categoria.CAMISA);
         produtoService.criar(req);
 
         assertThat(mvc.get().uri("/api/produtos/rascunho-slug-it"))

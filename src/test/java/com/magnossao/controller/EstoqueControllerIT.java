@@ -1,6 +1,7 @@
 package com.magnossao.controller;
 
 import com.magnossao.dto.request.ProdutoRequest;
+import com.magnossao.entity.Categoria;
 import com.magnossao.dto.response.CorDto;
 import com.magnossao.dto.response.TamanhoDto;
 import com.magnossao.repository.ProdutoRepository;
@@ -56,7 +57,7 @@ class EstoqueControllerIT {
     private Long criarSkuComProduto() {
         String slug = "estoque-it-" + System.nanoTime();
         ProdutoRequest req = new ProdutoRequest(slug, "Produto Estoque IT", null, null,
-                BigDecimal.valueOf(100), null, null);
+                BigDecimal.valueOf(100), null, null, Categoria.POLO);
         var criado = produtoService.criar(req);
         produtoService.adicionarCor(criado.id(),
                 new CorDto(null, "Navy", "navy", "#1B3A5C"));

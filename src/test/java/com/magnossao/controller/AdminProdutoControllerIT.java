@@ -2,6 +2,7 @@ package com.magnossao.controller;
 
 import com.magnossao.dto.response.CorDto;
 import com.magnossao.dto.request.ProdutoRequest;
+import com.magnossao.entity.Categoria;
 import com.magnossao.dto.response.TamanhoDto;
 import com.magnossao.service.ProdutoService;
 import com.magnossao.service.StorageService;
@@ -82,7 +83,7 @@ class AdminProdutoControllerIT {
     void mudarStatusRetorna200ComStatusPublicado() {
         ProdutoRequest req = new ProdutoRequest(
             "admin-status-it", "Status IT", "Status", "Col", BigDecimal.valueOf(100),
-            "Desc", "SEO");
+            "Desc", "SEO", Categoria.POLO);
         var criado = produtoService.criar(req);
 
         assertThat(mvc.patch().uri("/api/admin/produtos/{id}/status", criado.id())
@@ -96,7 +97,7 @@ class AdminProdutoControllerIT {
     void gerarSkusComCorETamanhoRetornaArrayComUmSku() {
         ProdutoRequest req = new ProdutoRequest(
             "admin-skus-it", "Skus IT", "Skus", "Col", BigDecimal.valueOf(100),
-            "Desc", "SEO");
+            "Desc", "SEO", Categoria.POLO);
         var criado = produtoService.criar(req);
         produtoService.adicionarCor(criado.id(), new CorDto(null, "Navy", "navy", "#001f3f"));
         produtoService.adicionarTamanho(criado.id(),

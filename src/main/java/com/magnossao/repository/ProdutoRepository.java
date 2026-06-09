@@ -1,5 +1,6 @@
 package com.magnossao.repository;
 
+import com.magnossao.entity.Categoria;
 import com.magnossao.entity.Produto;
 import com.magnossao.entity.StatusProduto;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -9,6 +10,8 @@ import java.util.Optional;
 public interface ProdutoRepository extends JpaRepository<Produto, Long> {
 
     List<Produto> findByStatusOrderByNomeAsc(StatusProduto status);
+
+    List<Produto> findByStatusAndCategoriaOrderByNomeAsc(StatusProduto status, Categoria categoria);
 
     Optional<Produto> findBySlug(String slug);
 

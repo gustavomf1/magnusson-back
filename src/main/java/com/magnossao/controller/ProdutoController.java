@@ -3,9 +3,11 @@ package com.magnossao.controller;
 import com.magnossao.service.ProdutoService;
 import com.magnossao.dto.response.ProdutoResponse;
 import com.magnossao.dto.response.ProdutoResumoResponse;
+import com.magnossao.entity.Categoria;
 import com.magnossao.entity.StatusProduto;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RequestParam;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -20,8 +22,9 @@ public class ProdutoController {
     }
 
     @GetMapping
-    public List<ProdutoResumoResponse> listar() {
-        return produtoService.listarPublicados();
+    public List<ProdutoResumoResponse> listar(
+            @RequestParam(required = false) Categoria categoria) {
+        return produtoService.listarPublicados(categoria);
     }
 
     @GetMapping("/{slug}")

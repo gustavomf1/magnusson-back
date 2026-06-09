@@ -26,9 +26,12 @@ public class ProdutoService {
         this.storageService = storageService;
     }
 
-    public List<ProdutoResumoResponse> listarPublicados() {
-        return produtoRepository
-            .findByStatusOrderByNomeAsc(StatusProduto.PUBLICADO)
+    public List<ProdutoResumoResponse> listarPublicados(Categoria categoria) {
+        if (categoria == null) {
+            return produtoRepository.findByStatusOrderByNomeAsc(StatusProduto.PUBLICADO)
+                .stream().map(this::toResumo).toList();
+        }
+        return produtoRepository.findByStatusAndCategoriaOrderByNomeAsc(StatusProduto.PUBLICADO, categoria)
             .stream().map(this::toResumo).toList();
     }
 
@@ -202,12 +205,13 @@ public class ProdutoService {
         p.setSlug(req.slug()); p.setNome(req.nome()); p.setNomeCurto(req.nomeCurto());
         p.setColecao(req.colecao()); p.setPreco(req.preco());
         p.setDescricao(req.descricao()); p.setDescricaoSeo(req.descricaoSeo());
+        p.setCategoria(req.categoria());
     }
 
     private ProdutoResumoResponse toResumo(Produto p) {
         String imagemPrincipal = p.getImagens().isEmpty() ? null : p.getImagens().getFirst().getUrl();
         return new ProdutoResumoResponse(p.getId(), p.getSlug(), p.getNome(), p.getNomeCurto(),
-            p.getColecao(), p.getPreco(), p.getStatus().name(), imagemPrincipal);
+            p.getColecao(), p.getPreco(), p.getStatus().name(), imagemPrincipal, p.getCategoria());
     }
 
     ProdutoResponse toResponse(Produto p) {
@@ -215,6 +219,7 @@ public class ProdutoService {
             p.getId(), p.getSlug(), p.getNome(), p.getNomeCurto(),
             p.getColecao(), p.getPreco(), p.getDescricao(), p.getDescricaoSeo(),
             p.getStatus().name(),
+            p.getCategoria(),
             p.getImagens().stream().map(i -> new ImagemDto(i.getId(), i.getUrl(), i.getAlt(), i.getOrdem())).toList(),
             p.getCores().stream().map(c -> new CorDto(c.getId(), c.getNome(), c.getToken(), c.getHex())).toList(),
             p.getTamanhos().stream().map(t -> new TamanhoDto(t.getId(), t.getLabel(), t.getPeito(), t.getComprimento(), t.getOmbro())).toList(),
