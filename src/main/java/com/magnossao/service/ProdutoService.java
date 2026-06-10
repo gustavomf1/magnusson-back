@@ -71,8 +71,28 @@ public class ProdutoService {
     public ProdutoResponse mudarStatus(Long id, String status) {
         Produto p = produtoRepository.findById(id)
             .orElseThrow(() -> new NoSuchElementException("Produto não encontrado: " + id));
-        p.setStatus(StatusProduto.valueOf(status));
+        StatusProduto novoStatus = StatusProduto.valueOf(status);
+        if (novoStatus == StatusProduto.PUBLICADO) {
+            validarPublicacao(p);
+        }
+        p.setStatus(novoStatus);
         return toResponse(produtoRepository.save(p));
+    }
+
+    private void validarPublicacao(Produto p) {
+        List<String> pendencias = new java.util.ArrayList<>();
+        if (p.getNome() == null || p.getNome().isBlank()) pendencias.add("nome");
+        if (p.getCategoria() == null) pendencias.add("categoria");
+        if (p.getPreco() == null || p.getPreco().signum() <= 0) pendencias.add("preço");
+        if (p.getDescricao() == null || p.getDescricao().isBlank()) pendencias.add("descrição");
+        if (p.getImagens().isEmpty()) pendencias.add("pelo menos uma imagem");
+        if (p.getCores().isEmpty()) pendencias.add("pelo menos uma cor");
+        if (p.getTamanhos().isEmpty()) pendencias.add("pelo menos um tamanho");
+        if (p.getSkus().isEmpty()) pendencias.add("SKUs gerados");
+        if (!pendencias.isEmpty()) {
+            throw new IllegalArgumentException(
+                "Não é possível publicar. Faltam: " + String.join(", ", pendencias) + ".");
+        }
     }
 
     public PresignedUploadResponse gerarUrlUpload(Long produtoId, String contentType) {
