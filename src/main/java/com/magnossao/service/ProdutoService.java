@@ -85,7 +85,8 @@ public class ProdutoService {
         if (p.getCategoria() == null) pendencias.add("categoria");
         if (p.getPreco() == null || p.getPreco().signum() <= 0) pendencias.add("preço");
         if (p.getDescricao() == null || p.getDescricao().isBlank()) pendencias.add("descrição");
-        if (p.getImagens().isEmpty()) pendencias.add("pelo menos uma imagem");
+        if (p.getCores().stream().anyMatch(c -> c.getImagens().isEmpty()))
+            pendencias.add("pelo menos uma foto em cada cor");
         if (p.getCores().isEmpty()) pendencias.add("pelo menos uma cor");
         if (p.getTamanhos().isEmpty()) pendencias.add("pelo menos um tamanho");
         if (p.getSkus().isEmpty()) pendencias.add("SKUs gerados");
@@ -103,32 +104,39 @@ public class ProdutoService {
         return new PresignedUploadResponse(result.uploadUrl(), result.chave(), result.urlPublica());
     }
 
-    public void confirmarImagem(Long produtoId, String chave, String url, String alt) {
+    public void confirmarImagem(Long produtoId, Long corId, String chave, String url, String alt) {
         Produto p = produtoRepository.findById(produtoId)
             .orElseThrow(() -> new NoSuchElementException("Produto não encontrado: " + produtoId));
-        int proxOrdem = p.getImagens().stream().mapToInt(ProdutoImagem::getOrdem).max().orElse(-1) + 1;
+        ProdutoCor cor = p.getCores().stream()
+            .filter(c -> c.getId().equals(corId))
+            .findFirst()
+            .orElseThrow(() -> new NoSuchElementException("Cor não encontrada: " + corId));
+        int proxOrdem = cor.getImagens().stream().mapToInt(ProdutoImagem::getOrdem).max().orElse(-1) + 1;
         ProdutoImagem img = new ProdutoImagem();
         img.setProduto(p);
+        img.setCor(cor);
         img.setUrl(url);
         img.setAlt(alt);
         img.setOrdem(proxOrdem);
         img.setStorageChave(chave);
-        p.getImagens().add(img);
+        cor.getImagens().add(img);
         produtoRepository.save(p);
     }
 
     public void deletarImagem(Long produtoId, Long imagemId) {
         Produto p = produtoRepository.findById(produtoId)
             .orElseThrow(() -> new NoSuchElementException("Produto não encontrado: " + produtoId));
-        p.getImagens().stream()
-            .filter(i -> i.getId().equals(imagemId))
-            .findFirst()
-            .ifPresent(img -> {
-                if (img.getStorageChave() != null) {
-                    storageService.deletar(img.getStorageChave());
-                }
-                p.getImagens().remove(img);
-            });
+        for (ProdutoCor cor : p.getCores()) {
+            cor.getImagens().stream()
+                .filter(i -> i.getId().equals(imagemId))
+                .findFirst()
+                .ifPresent(img -> {
+                    if (img.getStorageChave() != null) {
+                        storageService.deletar(img.getStorageChave());
+                    }
+                    cor.getImagens().remove(img);
+                });
+        }
         produtoRepository.save(p);
     }
 
@@ -138,7 +146,8 @@ public class ProdutoService {
         for (int i = 0; i < ids.size(); i++) {
             final int ordem = i;
             final Long imagemId = ids.get(i);
-            p.getImagens().stream()
+            p.getCores().stream()
+                .flatMap(c -> c.getImagens().stream())
                 .filter(img -> img.getId().equals(imagemId))
                 .findFirst()
                 .ifPresent(img -> img.setOrdem(ordem));
@@ -154,7 +163,8 @@ public class ProdutoService {
         p.getCores().add(cor);
         produtoRepository.save(p);
         ProdutoCor saved = p.getCores().getLast();
-        return new CorDto(saved.getId(), saved.getNome(), saved.getToken(), saved.getHex());
+        return new CorDto(saved.getId(), saved.getNome(), saved.getToken(), saved.getHex(),
+            saved.getImagens().stream().map(i -> new ImagemDto(i.getId(), i.getUrl(), i.getAlt(), i.getOrdem())).toList());
     }
 
     public void deletarCor(Long produtoId, Long corId) {
@@ -229,7 +239,11 @@ public class ProdutoService {
     }
 
     private ProdutoResumoResponse toResumo(Produto p) {
-        String imagemPrincipal = p.getImagens().isEmpty() ? null : p.getImagens().getFirst().getUrl();
+        String imagemPrincipal = p.getCores().stream()
+            .flatMap(c -> c.getImagens().stream())
+            .findFirst()
+            .map(ProdutoImagem::getUrl)
+            .orElse(null);
         return new ProdutoResumoResponse(p.getId(), p.getSlug(), p.getNome(), p.getNomeCurto(),
             p.getColecao(), p.getPreco(), p.getStatus().name(), imagemPrincipal, p.getCategoria());
     }
@@ -240,8 +254,8 @@ public class ProdutoService {
             p.getColecao(), p.getPreco(), p.getDescricao(), p.getDescricaoSeo(),
             p.getStatus().name(),
             p.getCategoria(),
-            p.getImagens().stream().map(i -> new ImagemDto(i.getId(), i.getUrl(), i.getAlt(), i.getOrdem())).toList(),
-            p.getCores().stream().map(c -> new CorDto(c.getId(), c.getNome(), c.getToken(), c.getHex())).toList(),
+            p.getCores().stream().map(c -> new CorDto(c.getId(), c.getNome(), c.getToken(), c.getHex(),
+                c.getImagens().stream().map(i -> new ImagemDto(i.getId(), i.getUrl(), i.getAlt(), i.getOrdem())).toList())).toList(),
             p.getTamanhos().stream().map(t -> new TamanhoDto(t.getId(), t.getLabel(), t.getPeito(), t.getComprimento(), t.getOmbro())).toList(),
             p.getSkus().stream().map(s -> new SkuDto(s.getId(), s.getCor().getId(), s.getTamanho().getId(), s.getCodigo(), s.isAtivo(), s.getQuantidade() > 0)).toList(),
             p.getBeneficios().stream().map(b -> new BeneficioDto(b.getId(), b.getIconeNome(), b.getTitulo(), b.getCorpo(), b.getOrdem())).toList(),

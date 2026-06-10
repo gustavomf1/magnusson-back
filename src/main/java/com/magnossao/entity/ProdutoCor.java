@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity @Table(name = "produto_cor")
 @Getter @Setter @NoArgsConstructor
@@ -24,4 +26,8 @@ public class ProdutoCor {
 
     @Column(nullable = false, length = 7)
     private String hex;
+
+    @OneToMany(mappedBy = "cor", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("ordem ASC")
+    private List<ProdutoImagem> imagens = new ArrayList<>();
 }

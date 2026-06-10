@@ -60,7 +60,7 @@ class EstoqueControllerIT {
                 BigDecimal.valueOf(100), null, null, Categoria.POLO);
         var criado = produtoService.criar(req);
         produtoService.adicionarCor(criado.id(),
-                new CorDto(null, "Navy", "navy", "#1B3A5C"));
+                new CorDto(null, "Navy", "navy", "#1B3A5C", java.util.List.of()));
         produtoService.adicionarTamanho(criado.id(),
                 new TamanhoDto(null, "M", null, null, null));
         return txTemplate.execute(status -> {

@@ -1,2 +1,2 @@
 package com.magnossao.dto.request;
-public record ImagemConfirmacaoRequest(String chave, String url, String alt) {}
+public record ImagemConfirmacaoRequest(Long corId, String chave, String url, String alt) {}

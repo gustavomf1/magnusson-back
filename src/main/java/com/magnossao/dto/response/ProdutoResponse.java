@@ -8,7 +8,7 @@ public record ProdutoResponse(
     Long id, String slug, String nome, String nomeCurto, String colecao,
     BigDecimal preco, String descricao, String descricaoSeo, String status,
     Categoria categoria,
-    List<ImagemDto> imagens, List<CorDto> cores, List<TamanhoDto> tamanhos,
+    List<CorDto> cores, List<TamanhoDto> tamanhos,
     List<SkuDto> skus, List<BeneficioDto> beneficios, List<DetalheDto> detalhes,
     List<ReviewDto> reviews, List<FaqDto> faqs, RegraCashbackInfoDto regraCashback
 ) {}

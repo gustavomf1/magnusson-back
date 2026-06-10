@@ -1,2 +1,5 @@
 package com.magnossao.dto.response;
-public record CorDto(Long id, String nome, String token, String hex) {}
+
+import java.util.List;
+
+public record CorDto(Long id, String nome, String token, String hex, List<ImagemDto> imagens) {}

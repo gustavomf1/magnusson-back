@@ -70,7 +70,7 @@ class PedidoControllerIT {
         var req = new ProdutoRequest(slug, "Produto Pedido IT", null, null,
                 BigDecimal.valueOf(200), null, null, Categoria.POLO);
         var criado = produtoService.criar(req);
-        produtoService.adicionarCor(criado.id(), new CorDto(null, "Azul", "azul", "#0000FF"));
+        produtoService.adicionarCor(criado.id(), new CorDto(null, "Azul", "azul", "#0000FF", java.util.List.of()));
         produtoService.adicionarTamanho(criado.id(), new TamanhoDto(null, "P", null, null, null));
         return txTemplate.execute(status -> {
             var produto = produtoRepository.findById(criado.id()).orElseThrow();

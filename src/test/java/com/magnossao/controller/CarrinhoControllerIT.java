@@ -57,7 +57,7 @@ class CarrinhoControllerIT {
         var req = new ProdutoRequest(slug, "Produto Carrinho IT", null, null,
                 BigDecimal.valueOf(150), null, null, Categoria.POLO);
         var criado = produtoService.criar(req);
-        produtoService.adicionarCor(criado.id(), new CorDto(null, "Preto", "preto", "#000000"));
+        produtoService.adicionarCor(criado.id(), new CorDto(null, "Preto", "preto", "#000000", java.util.List.of()));
         produtoService.adicionarTamanho(criado.id(), new TamanhoDto(null, "G", null, null, null));
         return txTemplate.execute(status -> {
             var produto = produtoRepository.findById(criado.id()).orElseThrow();

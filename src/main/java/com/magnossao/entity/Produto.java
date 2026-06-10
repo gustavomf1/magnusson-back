@@ -52,10 +52,6 @@ public class Produto {
     private OffsetDateTime atualizadoEm = OffsetDateTime.now();
 
     @OneToMany(mappedBy = "produto", cascade = CascadeType.ALL, orphanRemoval = true)
-    @OrderBy("ordem ASC")
-    private List<ProdutoImagem> imagens = new ArrayList<>();
-
-    @OneToMany(mappedBy = "produto", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProdutoCor> cores = new ArrayList<>();
 
     @OneToMany(mappedBy = "produto", cascade = CascadeType.ALL, orphanRemoval = true)

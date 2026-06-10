@@ -85,6 +85,13 @@ class AdminProdutoControllerIT {
             "admin-status-it", "Status IT", "Status", "Col", BigDecimal.valueOf(100),
             "Desc", "SEO", Categoria.POLO);
         var criado = produtoService.criar(req);
+        var cor = produtoService.adicionarCor(criado.id(),
+            new CorDto(null, "Navy", "navy", "#001f3f", java.util.List.of()));
+        produtoService.adicionarTamanho(criado.id(), new TamanhoDto(null, "M", 50, 70, 45));
+        produtoService.confirmarImagem(criado.id(), cor.id(), "k1", "http://x/img.png", "img");
+        assertThat(mvc.post().uri("/api/admin/produtos/{id}/skus/gerar", criado.id())
+                .contentType(MediaType.APPLICATION_JSON).content("{}"))
+            .hasStatusOk();
 
         assertThat(mvc.patch().uri("/api/admin/produtos/{id}/status", criado.id())
                 .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"PUBLICADO\"}"))
@@ -99,7 +106,7 @@ class AdminProdutoControllerIT {
             "admin-skus-it", "Skus IT", "Skus", "Col", BigDecimal.valueOf(100),
             "Desc", "SEO", Categoria.POLO);
         var criado = produtoService.criar(req);
-        produtoService.adicionarCor(criado.id(), new CorDto(null, "Navy", "navy", "#001f3f"));
+        produtoService.adicionarCor(criado.id(), new CorDto(null, "Navy", "navy", "#001f3f", java.util.List.of()));
         produtoService.adicionarTamanho(criado.id(),
             new TamanhoDto(null, "M", 50, 70, 45));
 
@@ -119,5 +126,28 @@ class AdminProdutoControllerIT {
     void comRoleClientRetorna403() {
         assertThat(mvc.get().uri("/api/admin/produtos"))
                 .hasStatus(403);
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void confirmarImagemAninhaFotoNaCor() {
+        ProdutoRequest req = new ProdutoRequest(
+            "admin-foto-cor-it", "Foto Cor IT", "Foto", "Col", BigDecimal.valueOf(100),
+            "Desc", "SEO", Categoria.POLO);
+        var criado = produtoService.criar(req);
+        var cor = produtoService.adicionarCor(criado.id(),
+            new CorDto(null, "Navy", "navy", "#001f3f", java.util.List.of()));
+
+        String body = """
+            {"corId": %d, "chave": "k1", "url": "http://x/img.png", "alt": "img"}
+            """.formatted(cor.id());
+
+        assertThat(mvc.post().uri("/api/admin/produtos/{id}/imagens/confirmar", criado.id())
+                .contentType(MediaType.APPLICATION_JSON).content(body))
+            .hasStatusOk();
+
+        assertThat(mvc.get().uri("/api/admin/produtos/{id}", criado.id()))
+            .hasStatusOk()
+            .bodyJson().extractingPath("$.cores[0].imagens[0].url").isEqualTo("http://x/img.png");
     }
 }

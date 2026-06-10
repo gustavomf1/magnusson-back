@@ -61,7 +61,7 @@ public class AdminProdutoController {
     @PostMapping("/{id}/imagens/confirmar")
     public ResponseEntity<Void> confirmarImagem(@PathVariable Long id,
                                                  @RequestBody ImagemConfirmacaoRequest req) {
-        produtoService.confirmarImagem(id, req.chave(), req.url(), req.alt());
+        produtoService.confirmarImagem(id, req.corId(), req.chave(), req.url(), req.alt());
         return ResponseEntity.ok().build();
     }
 

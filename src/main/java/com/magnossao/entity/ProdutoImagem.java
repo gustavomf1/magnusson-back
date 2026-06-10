@@ -16,6 +16,10 @@ public class ProdutoImagem {
     @JoinColumn(name = "produto_id", nullable = false)
     private Produto produto;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cor_id", nullable = false)
+    private ProdutoCor cor;
+
     @Column(nullable = false, columnDefinition = "TEXT")
     private String url;
 
