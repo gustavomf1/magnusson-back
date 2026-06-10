@@ -5,7 +5,11 @@ import com.magnossao.dto.request.*;
 import com.magnossao.repository.ProdutoRepository;
 import com.magnossao.service.ProdutoService;
 import com.magnossao.service.SkuService;
+import com.magnossao.entity.Categoria;
+import com.magnossao.entity.StatusProduto;
 import jakarta.transaction.Transactional;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -28,8 +32,14 @@ public class AdminProdutoController {
     }
 
     @GetMapping
-    public List<ProdutoResumoResponse> listarTodos() {
-        return produtoService.listarTodos();
+    public PaginaResponse<ProdutoResumoResponse> listar(
+            @RequestParam(required = false) StatusProduto status,
+            @RequestParam(required = false) Categoria categoria,
+            @RequestParam(required = false) String busca,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        var pageable = PageRequest.of(page, size, Sort.by("nome").ascending());
+        return produtoService.listarAdmin(status, categoria, busca, pageable);
     }
 
     @GetMapping("/{id}")

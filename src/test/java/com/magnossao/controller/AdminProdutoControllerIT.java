@@ -72,10 +72,48 @@ class AdminProdutoControllerIT {
 
     @Test
     @WithMockUser(roles = "ADMIN")
-    void listarTodosRetorna200ComArray() {
+    void listarRetorna200ComPagina() {
         assertThat(mvc.get().uri("/api/admin/produtos"))
             .hasStatusOk()
-            .bodyJson().extractingPath("$").asArray().isNotNull();
+            .bodyJson().extractingPath("$.conteudo").asArray().isNotNull();
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void listarTrazCamposDePaginacao() {
+        assertThat(mvc.get().uri("/api/admin/produtos?page=0&size=5"))
+            .hasStatusOk()
+            .bodyJson().extractingPath("$.pagina").isEqualTo(0);
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void filtrarPorStatusRascunhoNaoTrazPublicados() {
+        produtoService.criar(new ProdutoRequest(
+            "filtro-rascunho-it", "Filtro Rascunho IT", "FR", "Col",
+            BigDecimal.valueOf(100), "Desc", "SEO", Categoria.POLO));
+        assertThat(mvc.get().uri("/api/admin/produtos?status=RASCUNHO"))
+            .hasStatusOk()
+            .bodyJson().extractingPath("$.conteudo").asArray().isNotEmpty();
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void buscarPorNomeFiltraResultado() {
+        produtoService.criar(new ProdutoRequest(
+            "busca-zebra-it", "Produto Zebra Unico", "Zebra", "Col",
+            BigDecimal.valueOf(100), "Desc", "SEO", Categoria.POLO));
+        assertThat(mvc.get().uri("/api/admin/produtos?busca=zebra"))
+            .hasStatusOk()
+            .bodyJson().extractingPath("$.conteudo[0].nome").asString().contains("Zebra");
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void filtrarPorCategoriaShortsSemResultadosRetornaVazio() {
+        assertThat(mvc.get().uri("/api/admin/produtos?categoria=SHORTS&busca=__inexistente__"))
+            .hasStatusOk()
+            .bodyJson().extractingPath("$.conteudo").asArray().isEmpty();
     }
 
     @Test

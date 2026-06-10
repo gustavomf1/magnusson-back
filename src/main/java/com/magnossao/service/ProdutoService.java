@@ -6,7 +6,12 @@ import com.magnossao.repository.ProdutoRepository;
 import com.magnossao.repository.SkuRepository;
 import com.magnossao.entity.*;
 import jakarta.transaction.Transactional;
+import jakarta.persistence.criteria.Predicate;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -35,9 +40,28 @@ public class ProdutoService {
             .stream().map(this::toResumo).toList();
     }
 
-    public List<ProdutoResumoResponse> listarTodos() {
-        return produtoRepository.findAll()
-            .stream().map(this::toResumo).toList();
+    public PaginaResponse<ProdutoResumoResponse> listarAdmin(
+            StatusProduto status, Categoria categoria, String busca, Pageable pageable) {
+        Specification<Produto> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            if (status != null) {
+                predicates.add(cb.equal(root.get("status"), status));
+            }
+            if (categoria != null) {
+                predicates.add(cb.equal(root.get("categoria"), categoria));
+            }
+            if (busca != null && !busca.isBlank()) {
+                String like = "%" + busca.toLowerCase() + "%";
+                predicates.add(cb.or(
+                    cb.like(cb.lower(root.get("nome")), like),
+                    cb.like(cb.lower(root.get("slug")), like)));
+            }
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+        Page<ProdutoResumoResponse> page =
+            produtoRepository.findAll(spec, pageable).map(this::toResumo);
+        return new PaginaResponse<>(
+            page.getContent(), page.getNumber(), page.getTotalPages(), page.getTotalElements());
     }
 
     public ProdutoResponse buscarPorSlug(String slug) {
